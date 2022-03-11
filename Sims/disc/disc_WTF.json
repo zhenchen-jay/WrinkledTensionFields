@@ -1,0 +1,18 @@
+
+{
+	"amp_path" : "",
+	"base_mesh" : "disc_simulated.obj",
+	"clamp" : false,
+	"clamped_DOFs" : "disc_clamped_vertices.dat",
+	"dphi_path" : "",
+	"nasoq_eps" : 1.000000000000000e-06,
+	"obs_mesh" : "",
+	"phi_path" : "",
+	"poisson_ratio" : 0.440,
+	"quadpoints" : 3,
+	"rest_flat" : true,
+	"rest_mesh" : "disc.obj",
+	"sff_type" : "midedgeTan",
+	"thickness" : 0.00010,
+	"youngs_modulus" : 10000000.0
+}

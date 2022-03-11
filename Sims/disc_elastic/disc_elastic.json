@@ -1,0 +1,26 @@
+
+{
+	"bending_type" : "elastic",
+	"clamped_DOFs" : "disc_clamped_vertices.dat",
+	"collision_eta" : 5.000000000000000e-05,
+	"collision_penalty" : 0.0,
+	"cur_mesh" : "disc_simulated.obj",
+	"curedge_DOFs" : "disc_edgedofs_simulated.txt",
+	"density" : 1000.0,
+	"frame_frequency" : 200,
+	"gravity" : [ 0.0, 0.0, 0.0 ],
+	"init_mesh" : "disc_guess.obj",
+	"isNeoHookean" : false,
+	"isTFT" : false,
+	"max_stepsize" : 1.0,
+	"num_interpolation" : 1,
+	"obs_mesh" : "disc_obstacle.obj",
+	"perturb" : 0.0,
+	"poisson_ratio" : 0.440,
+	"pressure" : 600.0,
+	"rest_flat" : true,
+	"rest_mesh" : "disc.obj",
+	"sff_type" : "midedgeTan",
+	"thickness" : 0.00010,
+	"youngs_modulus" : 10000000.0
+}
