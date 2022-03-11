@@ -1,3 +1,6 @@
 [submodule "external/libigl"]
 	path = external/libigl
 	url = https://github.com/libigl/libigl.git
+[submodule "external/nasoq"]
+	path = external/nasoq
+	url = https://github.com/sympiler/nasoq.git
