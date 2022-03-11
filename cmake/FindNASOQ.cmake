@@ -3,16 +3,7 @@
 #
 #  NASOQ_FOUND - system has LIBIGL
 #  NASOQ_INCLUDE_DIRS - the NASOQ include directories
-if(NASOQ_FOUND)
-    return()
-endif()
-
 find_path(NASOQ_ROOT_DIR QP/nasoq.h
-    HINTS
-        ENV NASOQ
-        ENV NASOQROOT
-        ENV NASOQ_ROOT
-        ENV NASOQ_DIR
     PATHS
         ${CMAKE_SOURCE_DIR}/../..
         ${CMAKE_SOURCE_DIR}/..

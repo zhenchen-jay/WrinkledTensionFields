@@ -93,8 +93,10 @@ else()
 endif()
 
 # use json
-add_subdirectory(external/jsoncpp)
-include_directories(external/jsoncpp/include)
+find_package(json REQUIRED)
+message("found libigl at ${JSON_INCLUDE_DIR}")
+# add_subdirectory(external/jsoncpp)
+include_directories(${JSON_INCLUDE_DIR})
 
 # Binary executables
 add_subdirectory(SolverApp)
