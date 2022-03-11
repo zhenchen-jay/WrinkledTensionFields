@@ -21,10 +21,11 @@ find_path(NASOQ_ROOT_DIR QP/nasoq.h
         ${CMAKE_SOURCE_DIR}/nasoq
         ${CMAKE_SOURCE_DIR}/../nasoq
         ${CMAKE_SOURCE_DIR}/../../nasoq
+        ${CMAKE_SOURCE_DIR}/../external/nasoq
+        ${CMAKE_SOURCE_DIR}/external/nasoq
         /usr
         /usr/local
         /usr/local/igl/nasoq
-        /home/zchen96/Projects/tools/nasoq
 )
 
 if(NASOQ_ROOT_DIR)
