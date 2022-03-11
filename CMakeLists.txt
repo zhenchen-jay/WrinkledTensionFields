@@ -45,6 +45,11 @@ option(LIBIGL_WITH_XML               "Use XML"            OFF)
 find_package(LIBIGL REQUIRED)
 message("found libigl at ${LIBIGL_INCLUDE_DIR}")
 
+# use json
+find_package(JSON REQUIRED)
+message("found json at ${JSON_INCLUDE_DIR}")
+include_directories(${JSON_INCLUDE_DIR})
+
 option(NASOQ "Use NASOQ" ON)
 if(NASOQ)
   find_package(MKL REQUIRED)
@@ -91,12 +96,6 @@ else()
   message("Found Gurobi lib in : " ${GUROBI_LIBRARY})
   include_directories(${GUROBI_INCLUDE_DIRS})
 endif()
-
-# use json
-find_package(json REQUIRED)
-message("found libigl at ${JSON_INCLUDE_DIR}")
-# add_subdirectory(external/jsoncpp)
-include_directories(${JSON_INCLUDE_DIR})
 
 # Binary executables
 add_subdirectory(SolverApp)

@@ -8,23 +8,20 @@ find_path(JSON_INCLUDE_DIR json/json.h
         ${CMAKE_SOURCE_DIR}/../..
         ${CMAKE_SOURCE_DIR}/..
         ${CMAKE_SOURCE_DIR}
-        ${CMAKE_SOURCE_DIR}/../tools/Jsoncpp
-        ${CMAKE_SOURCE_DIR}/Jsoncpp
-        ${CMAKE_SOURCE_DIR}/../Jsoncpp
-        ${CMAKE_SOURCE_DIR}/../../Jsoncpp
-        ${CMAKE_SOURCE_DIR}/external/Jsoncpp
-        ${CMAKE_SOURCE_DIR}/../external/Jsoncpp
+        ${CMAKE_SOURCE_DIR}/../tools/json
+        ${CMAKE_SOURCE_DIR}/json
+        ${CMAKE_SOURCE_DIR}/../json
+        ${CMAKE_SOURCE_DIR}/../../json
+        ${CMAKE_SOURCE_DIR}/external/json
+        ${CMAKE_SOURCE_DIR}/../external/json
         /usr
         /usr/local
-        /usr/local/igl/Jsoncpp
+        /usr/local/igl/json
     PATH_SUFFIXES include
 )
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(JSON
-    "\nJSON not found --- You can download it using:\n\tgit clone --recursive https://github.com/open-source-parsers/jsoncpp.git ${CMAKE_SOURCE_DIR}/../JSON"
+    "\nJSON not found --- You can download it using:\n\tgit clone --recursivehttps://github.com/nlohmann/json.git ${CMAKE_SOURCE_DIR}/../JSON"
     JSON_INCLUDE_DIR)
 mark_as_advanced(JSON_INCLUDE_DIR)
-
-list(APPEND CMAKE_MODULE_PATH "${JSON_INCLUDE_DIR}/../cmake")
-include(JSON)
