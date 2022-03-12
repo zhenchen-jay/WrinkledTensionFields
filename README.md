@@ -1,6 +1,6 @@
 # Wrinkled Tension Field
 
-This code implements the paper "Fine Wrinkling on Coarsely-Meshed Thin Shells".
+This code implements the paper "Fine Wrinkling on Coarsely-Meshed Thin Shells". (Only tested with Linux)
 
 ## Elastic Material Model (benchmarks)
 
@@ -13,7 +13,7 @@ As mentioned in the paper, we seperate the solver into two parts: base mesh extr
 ## Dependencies
 - [libigl](https://libigl.github.io/) (used as submodule)
 - [Gurobi](https://www.gurobi.com/downloads/?campaignid=193283256&adgroupid=51266130904&creative=419644944624&keyword=gurobi&matchtype=p&gclid=Cj0KCQjwit_8BRCoARIsAIx3Rj6JdxrDRsUeWNRjj8ABmFg40kehVwvHoTsi28UxLeOqa8GhYTQU9usaAucxEALw_wcB) (Free for academic use).
-- [NASOQ](https://nasoq.github.io/) (used as submodule)
+- [NASOQ](https://nasoq.github.io/) (used as submodule, which requires the [MKL](https://www.intel.com/content/www/us/en/develop/documentation/get-started-with-mkl-for-dpcpp/top.html))
 - [SuiteSparse](https://people.engr.tamu.edu/davis/suitesparse.html)
 - [TBB](https://github.com/wjakob/tbb)
 - [Json](https://github.com/open-source-parsers/jsoncpp) (wrappered in "external/jsoncppWrapper")
