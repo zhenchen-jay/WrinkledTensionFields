@@ -248,83 +248,8 @@ void repaint(igl::opengl::glfw::Viewer& viewer)
 	std::cout << "Reset Viewer done" << std::endl;
 }
 
-bool sequentialRotateCylinder(std::string path)
-{
-    WTFState lastState;
-    for(int i = 0; i < 20; i++)
-    {
-        std::string mypath = path + "/rotation/" + std::to_string((i + 1) * 2) + "/cylinder_WTF.json";
-        bool ok = loadWTF(mypath, setup, curState);
-        if(!ok)
-        {
-            std::cout << "failed to load data in: " << mypath << std::endl;
-            return false;
-        }
-        WTFPath = mypath;
-        int index = mypath.rfind("_");
-        filePathPrefix = mypath.substr(0, index);
-        std::cout << "Model Name is: " << filePathPrefix << std::endl;
-
-        std::cout << "Set Parameters" << std::endl;
-        setParameters();
-
-        curState.reinitializeWrinkleVaribles(setup);
-
-        if(i != 0)
-        {
-            curState.phi = lastState.phi;
-            curState.dphi = lastState.dphi;
-            curState.amplitude = lastState.amplitude;
-        }
-
-        std::cout << "Start with: " << std::endl;
-        std::cout << "norm of phi : " << curState.phi.norm() << std::endl;
-        std::cout << "norm of dphi : " << curState.dphi.norm() << std::endl;
-        std::cout << "norm of amplitude : " << curState.amplitude.norm() << std::endl;
-
-        std::cout << "file path prefix: " << filePathPrefix << std::endl;
-
-        ShellSolver::WTFSQPSolver(setup, curState, filePathPrefix, WTFOptParams);
-        saveWTF(WTFPath, setup, curState);
-
-        std::cout << "end with: " << std::endl;
-        std::cout << "norm of phi : " << curState.phi.lpNorm<Eigen::Infinity>() << std::endl;
-        std::cout << "norm of dphi : " << curState.dphi.lpNorm<Eigen::Infinity>() << std::endl;
-        std::cout << "norm of sqrt amplitude : " << curState.amplitude.lpNorm<Eigen::Infinity>() << std::endl;
-
-		std::string ampFile = path + "/rotation/amp/amp_" + std::to_string(i) + ".txt";
-		std::ofstream afs(ampFile);
-		afs << curState.amplitude << std::endl; 
-
-		std::string dphiFile = path + "/rotation/omega/omega_" + std::to_string(i) + ".txt";
-		std::ofstream dfs(dphiFile);
-		dfs << curState.dphi << std::endl; 
-
-		std::string meshFile = path + "/rotation/mesh/mesh_" + std::to_string(i) + ".obj";
-		igl::writeOBJ(meshFile, curState.basePos, curState.baseMesh.faces());
-
-        Eigen::MatrixXd NV, NVSeam;
-        Eigen::MatrixXi NF, NFSeam;
-
-
-        Eigen::MatrixXd curV = curState.basePos;
-        Eigen::MatrixXi curF = curState.baseMesh.faces();
-        Eigen::VectorXd curAmp = curState.amplitude;
-        Eigen::VectorXd curPhi = curState.phi;
-
-
-        std::string filename = filePathPrefix + "_wrinkledMesh.obj";
-        igl::writeOBJ(filename.c_str(), curState.wrinkledPos, curState.wrinkledF);
-
-         lastState = curState;
-    }
-
-    return true;
-}
-
 int main(int argc, char* argv[])
 {
-    sequentialRotateCylinder("/home/zchen96/Downloads/cylinder688verts/");
 	defaultPath = "../../Sims/disc/disc_WTF.json";
 	if (argc >= 2)
 		defaultPath = argv[1];

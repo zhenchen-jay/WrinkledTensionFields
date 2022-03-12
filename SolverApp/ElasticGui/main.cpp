@@ -226,88 +226,8 @@ void setParameters()
 	isVisualizeObstacle = false;
 }
 
-bool sequentialRotateCylinder(const std::string& path)
-{
-    std::cout << "path: " << path << std::endl;
-    int index = path.rfind("/");
-    filePathPrefix = path.substr(0, index);
-    std::cout << "filePathPrefix: " << filePathPrefix << std::endl;
-    bool ok = loadElastic(path, setup, curState);
-    if(!ok)
-    {
-        std::cout << "error in the loading cylinder file!" << std::endl;
-        return ok;
-    }
-
-    setup.tensionField = true;
-    setup.bendingType = BendingType::quadraticBending;  // use quad bending
-
-    double zmax = curState.initialGuess.col(2).maxCoeff();
-    double zmin = curState.initialGuess.col(2).minCoeff();
-
-    std::vector<std::vector<int>> bnds;
-    igl::boundary_loop(curState.mesh.faces(), bnds);
-
-    int upbnds = 0;
-    if(curState.initialGuess(bnds[0][0], 2) < (zmin + zmax) / 2)
-        upbnds = 1;
-
-    setParameters();
-
-    curState.curPos = curState.initialGuess;    // set to the initial cylinder without twisted
-    
-    for(int i = 0; i < 20; i++)
-    {
-        double theta = (i + 1) * 2.0 / 180.0 * M_PI;
-        std::cout << "rotation angle: " <<  (i + 1) * 2 << std::endl;
-        Eigen::Matrix2d J;
-        J << std::cos(theta), -std::sin(theta), std::sin(theta), std::cos(theta);
-
-        for(auto& id: bnds[upbnds])
-        {
-            Eigen::Vector2d pos2d;
-            pos2d<< curState.initialGuess(id, 0), curState.initialGuess(id, 1);
-            pos2d = J * pos2d;
-            setup.clampedDOFs[3 * id + 0] = pos2d(0);
-            setup.clampedDOFs[3 * id + 1] = pos2d(1);
-            setup.clampedDOFs[3 * id + 2] = curState.initialGuess(id, 2);
-        }
-        for(auto& id: bnds[1 - upbnds])
-        {
-            for(int j = 0; j < 3; j++)
-                setup.clampedDOFs[3 * id + j] = curState.initialGuess(id, j);
-        }
-
-        for (int k = 1; k <= numSteps; k++)
-        {
-            ShellSolver::fullSimNewtonStaticSolver(setup, curState, filePathPrefix, fullSimOptParams);
-        }
-
-        igl::writeOBJ(filePathPrefix + "/rotation/" + std::to_string((i + 1) * 2) + "/cylinder_simulated.obj", curState.curPos, curState.mesh.faces());
-        // write the clamped information
-        std::string clampedFile = filePathPrefix + "/rotation/" + std::to_string((i + 1) * 2) + "/cylinder_clamped_vertices.dat";
-        std::ofstream cfs = std::ofstream (clampedFile);
-        if(cfs)
-        {
-            cfs << bnds[0].size() + bnds[1].size() << "\n";
-            cfs << "#" << "\n";
-            for(auto& id: bnds[0])
-            {
-                cfs << id << " " << curState.curPos.row(id) << "\n";
-            }
-            for(auto& id: bnds[1])
-            {
-                cfs << id << " " << curState.curPos.row(id) << "\n";
-            }
-        }
-
-    }
-    return true;
-}
-
 int main(int argc, char* argv[])
 {
-    sequentialRotateCylinder("/home/zchen96/Downloads/cylinder688verts/cylinder_Elastic.json");
 	defaultPath = "../../Sims/disc_elastic/disc_elastic.json";
 	if (argc >= 2)
 		defaultPath = argv[1];
