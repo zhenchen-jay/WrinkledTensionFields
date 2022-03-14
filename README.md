@@ -17,7 +17,7 @@ As mentioned in the paper, we seperate the solver into two parts: base mesh extr
 - [SuiteSparse](https://people.engr.tamu.edu/davis/suitesparse.html)
 - [TBB](https://github.com/wjakob/tbb)
 - [Json](https://github.com/open-source-parsers/jsoncpp) (wrappered in "external/jsoncppWrapper")
-- [cppoptlib](https://github.com/PatWie/CppNumericalSolvers/tree/v2/include/cppoptlib) (a wrapper version in inside "external/cppoptlib", where we build our SQP solver with NASOQ)
+- [cppoptlib](https://github.com/PatWie/CppNumericalSolvers/tree/v2/include/cppoptlib) (a wrapper version is inside "external/cppoptlib", where we build our SQP solver with NASOQ)
 
 ## To download and build
 
