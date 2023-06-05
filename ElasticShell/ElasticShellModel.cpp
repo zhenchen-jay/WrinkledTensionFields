@@ -3,11 +3,11 @@
 #include <iomanip>
 #include <igl/writeOBJ.h>
 
-#include "../PressureEnergy.h"
-#include "../PenaltyEnergy.h"
-#include "../collisionDetectionWrapper/CTCD.h"
-
 #include "../Timer.h"
+#include "../Collision/Collision.h"
+#include "../OtherEnergies/PressureEnergy.h"
+#include "../OtherEnergies/PenaltyEnergy.h"
+#include "../Collision/CTCD.h"
 
 #include "ElasticShellModel.h"
 #include "ElasticShellMaterial.h"
@@ -15,7 +15,6 @@
 #include "StVKTensionFieldMaterial.h"
 #include "NeoHookeanMaterial.h"
 #include "ElasticEnergy.h"
-#include "../Collision.h"
 
 Projection::Projection(const std::vector<bool>& keepDOFs)
 {
@@ -76,14 +75,14 @@ void Projection::projectMatrix(std::vector<Eigen::Triplet<double> >& mat) const
 	}
 }
 
-bool ElasticShellModel::initialization(const ElasticSetup setup, const ElasticState initialGuess, std::string filePrefix, double interp, bool posHess, bool isParallel)
+bool ElasticShellModel::initialization(const ElasticSetup setup, const ElasticState initialGuess, std::string filePrefix, bool posHess, bool isParallel)
 {
 	_setup = setup;
 	_state = initialGuess;
 	_lameAlpha = setup.YoungsModulus * setup.PoissonsRatio / (1.0 - setup.PoissonsRatio * setup.PoissonsRatio);
 	_lameBeta = setup.YoungsModulus / 2.0 / (1.0 + setup.PoissonsRatio);
 	_filePrefix = filePrefix;
-	_interp = interp;
+//	_interp = interp;
 	_isUsePosHess = posHess;
 	_isParallel = isParallel;
 
@@ -101,31 +100,11 @@ bool ElasticShellModel::initialization(const ElasticSetup setup, const ElasticSt
 	setProjM();
 
 	std::cout << "material type: " << std::endl;
-	if (setup.isNoeHookean)
-	{
-		std::cout << "NoeHookean Model." << std::endl;
-	}
-	else
-	{
-		std::cout << "StVK Model." << std::endl;
+    std::cout << "stretching: " << setup.strecthingType << std::endl;
+    // bending energy
+    std::cout << "bending:"  << _setup.bendingType << std::endl;
 
-		std::cout << "model parameters: " << std::endl;
-		if (setup.tensionField)
-		{
-			_isC2 = false;
-			std::cout << "using tensionfield stretching." << std::endl;
-		}
-
-		else
-		{
-			_isC2 = true;
-			std::cout << "using elastic stretching." << std::endl;
-		}
-
-
-		// bending energy
-		std::cout << _setup.bendingType << std::endl;
-	}
+    _isC2 = setup.strecthingType != "tensionField";
 	std::cout << "pressure : " << setup.pressure << std::endl;
 	std::cout << "gravity coefficient: " << setup.gravity.transpose() << std::endl;
 	std::cout << "Collision penalty constant is: " << setup.penaltyK << std::endl;
@@ -163,7 +142,7 @@ void ElasticShellModel::setProjM()
 	_proj = Projection(keepDOFs);
 }
 
-void ElasticShellModel::convertCurState2Variables(const ElasticState curState, TVector& x)
+void ElasticShellModel::convertCurState2Variables(const ElasticState curState, Eigen::VectorXd& x)
 {
 	int nverts = curState.curPos.rows();
 	int nedges = _state.mesh.nEdges();
@@ -182,7 +161,7 @@ void ElasticShellModel::convertCurState2Variables(const ElasticState curState, T
 	_proj.projectVector(fullX, x);	
 }
 
-void ElasticShellModel::convertVariables2CurState(const TVector x, ElasticState& curState)
+void ElasticShellModel::convertVariables2CurState(const Eigen::VectorXd x, ElasticState& curState)
 {
 	curState = _state;
 	int nverts = curState.curPos.rows();
@@ -202,14 +181,15 @@ void ElasticShellModel::convertVariables2CurState(const TVector x, ElasticState&
 	{
 		int vid = it.first / 3;
 		int coord = it.first % 3;
-		curState.curPos(vid, coord) = _interp * it.second + (1.0 - _interp) * curState.initialGuess(vid, coord);
+		curState.curPos(vid, coord) = it.second;
 	}
+
 
 	curState.curEdgeDOFs = fullx.segment(3 * nverts, nedgedofs * nedges);
 	
 }
 
-double ElasticShellModel::value(const TVector& x)
+double ElasticShellModel::value(const Eigen::VectorXd& x)
 {
 	int nverts = _state.curPos.rows();
 	convertVariables2CurState(x, _state);
@@ -218,12 +198,12 @@ double ElasticShellModel::value(const TVector& x)
 	std::shared_ptr<ElasticShellMaterial> mat;
 
 	// stretching energy
-	if (_setup.isNoeHookean)
+	if (_setup.strecthingType == "NeoHookean")
 	{
 		mat = std::make_shared<NeoHookeanMaterial>();
 	}
 
-	else if (_setup.tensionField)
+	else if (_setup.strecthingType == "tensionField")
 	{
 		mat = std::make_shared<StVKTensionFieldMaterial>();	
 	}
@@ -279,7 +259,7 @@ double ElasticShellModel::value(const TVector& x)
 	return energy;
 }
 
-double ElasticShellModel::stretchingValue(const TVector& x)
+double ElasticShellModel::stretchingValue(const Eigen::VectorXd& x)
 {
 	int nverts = _state.curPos.rows();
 	convertVariables2CurState(x, _state);
@@ -287,42 +267,43 @@ double ElasticShellModel::stretchingValue(const TVector& x)
 	// stretching energy
 	std::shared_ptr<ElasticShellMaterial> mat;
 
-	// stretching energy
-	if (_setup.isNoeHookean)
-	{
-		mat = std::make_shared<NeoHookeanMaterial>();
-	}
+    // stretching energy
+    if (_setup.strecthingType == "NeoHookean")
+    {
+        mat = std::make_shared<NeoHookeanMaterial>();
+    }
 
-	else if (_setup.tensionField)
-	{
-		mat = std::make_shared<StVKTensionFieldMaterial>();
-	}
-	else
-	{
-		mat = std::make_shared<StVKMaterial>();
-	}
+    else if (_setup.strecthingType == "tensionField")
+    {
+        mat = std::make_shared<StVKTensionFieldMaterial>();
+    }
+    else
+    {
+        mat = std::make_shared<StVKMaterial>();
+    }
 
 	energy = elasticStretchingEnergy(_state.mesh, _state.curPos, _state.curEdgeDOFs, _lameAlpha, _lameBeta, _setup.thickness, _setup.abars, *_setup.sff, *mat, NULL, NULL, false, _isParallel);
 	return energy;
 }
 
-double ElasticShellModel::bendingValue(const TVector& x)
+double ElasticShellModel::bendingValue(const Eigen::VectorXd& x)
 {
 	double energy = 0;
 	std::shared_ptr<ElasticShellMaterial> mat;
-	if (_setup.isNoeHookean)
-	{
-		mat = std::make_shared<NeoHookeanMaterial>();
-	}
+    // stretching energy
+    if (_setup.strecthingType == "NeoHookean")
+    {
+        mat = std::make_shared<NeoHookeanMaterial>();
+    }
 
-	else if (_setup.tensionField)
-	{
-		mat = std::make_shared<StVKTensionFieldMaterial>();
-	}
-	else
-	{
-		mat = std::make_shared<StVKMaterial>();
-	}
+    else if (_setup.strecthingType == "tensionField")
+    {
+        mat = std::make_shared<StVKTensionFieldMaterial>();
+    }
+    else
+    {
+        mat = std::make_shared<StVKMaterial>();
+    }
 	// bending energy
 
 	double bendE = 0;
@@ -342,7 +323,7 @@ double ElasticShellModel::bendingValue(const TVector& x)
 }
 
 
-double ElasticShellModel::penaltyValue(const TVector& x)
+double ElasticShellModel::penaltyValue(const Eigen::VectorXd& x)
 {
 	if (_setup.penaltyK > 0.0)
 	{
@@ -356,7 +337,7 @@ double ElasticShellModel::penaltyValue(const TVector& x)
 	}
 }
 
-void ElasticShellModel::gradient(const TVector& x, TVector& grad)
+void ElasticShellModel::gradient(const Eigen::VectorXd& x, Eigen::VectorXd& grad)
 {
 	int nverts = _state.curPos.rows();
 	convertVariables2CurState(x, _state);
@@ -364,19 +345,20 @@ void ElasticShellModel::gradient(const TVector& x, TVector& grad)
 	std::shared_ptr<ElasticShellMaterial> mat;
 
 	// stretching energy
-	if (_setup.isNoeHookean)
-	{
-		mat = std::make_shared<NeoHookeanMaterial>();
-	}
+    // stretching energy
+    if (_setup.strecthingType == "NeoHookean")
+    {
+        mat = std::make_shared<NeoHookeanMaterial>();
+    }
 
-	else if (_setup.tensionField)
-	{
-		mat = std::make_shared<StVKTensionFieldMaterial>();
-	}
-	else
-	{
-		mat = std::make_shared<StVKMaterial>();
-	}
+    else if (_setup.strecthingType == "tensionField")
+    {
+        mat = std::make_shared<StVKTensionFieldMaterial>();
+    }
+    else
+    {
+        mat = std::make_shared<StVKMaterial>();
+    }
 
 	energy = elasticStretchingEnergy(_state.mesh, _state.curPos, _state.curEdgeDOFs, _lameAlpha, _lameBeta, _setup.thickness, _setup.abars, *_setup.sff, *mat, &grad, NULL, false, _isParallel);
 	// std::cout<<"stretching gradient: "<<grad.norm()<<std::endl;
@@ -438,7 +420,7 @@ void ElasticShellModel::gradient(const TVector& x, TVector& grad)
 
 }
 
-void ElasticShellModel::hessian(const TVector& x, THessian& hessian)
+void ElasticShellModel::hessian(const Eigen::VectorXd& x, Eigen::SparseMatrix<double>& hessian)
 {
 	Timer timer;
 	std::vector<Eigen::Triplet<double> > hessianT;
@@ -451,20 +433,20 @@ void ElasticShellModel::hessian(const TVector& x, THessian& hessian)
 	int nedges = _state.mesh.nEdges();
 	int nedgedofs = _setup.sff->numExtraDOFs();
 
-	// stretching energy
-	if (_setup.isNoeHookean)
-	{
-		mat = std::make_shared<NeoHookeanMaterial>();
-	}
+    // stretching energy
+    if (_setup.strecthingType == "NeoHookean")
+    {
+        mat = std::make_shared<NeoHookeanMaterial>();
+    }
 
-	else if (_setup.tensionField)
-	{
-		mat = std::make_shared<StVKTensionFieldMaterial>();
-	}
-	else
-	{
-		mat = std::make_shared<StVKMaterial>();
-	}
+    else if (_setup.strecthingType == "tensionField")
+    {
+        mat = std::make_shared<StVKTensionFieldMaterial>();
+    }
+    else
+    {
+        mat = std::make_shared<StVKMaterial>();
+    }
 
 	timer.start();
 	energy = elasticStretchingEnergy(_state.mesh, _state.curPos, _state.curEdgeDOFs, _lameAlpha, _lameBeta, _setup.thickness, _setup.abars, *_setup.sff, *mat, NULL, &hessianT, _isUsePosHess, _isParallel);
@@ -566,16 +548,16 @@ void ElasticShellModel::hessian(const TVector& x, THessian& hessian)
 	std::cout << "setting hessian from triplet took: " << timer.elapsedSeconds() << std::endl;	
 }
 
-double ElasticShellModel::getMaxStep(const TVector& x, const TVector& dir, double step)
+double ElasticShellModel::getMaxStep(const Eigen::VectorXd& x, const Eigen::VectorXd& dir, double step)
 {
 	if (_setup.penaltyK > 0)
 	{
-		TVector start = x;
-		TVector updated = start + dir * step;
+		Eigen::VectorXd start = x;
+		Eigen::VectorXd updated = start + dir * step;
 
 		/*auto fullDir = getFullDir(dir);
 
-		TVector grad;
+		Eigen::VectorXd grad;
 		gradient(x, grad);
 		auto fullgrad = getFullDir(grad);*/
 
@@ -692,13 +674,6 @@ void ElasticShellModel::save(int curIterations, TimeCost curTimeCost, double ste
 		tfs << "grad_cost: " << curTimeCost.gradTime << ", hess_cost: " << curTimeCost.hessTime << ", solver_cost: " << curTimeCost.solverTime << ", collision_cost: " << curTimeCost.collisionDectionTime << ", linesearch_cost: " << curTimeCost.lineSearchTime << ", update_cost: " << curTimeCost.updateTime << ", checkConverg_cost: " << curTimeCost.convergenceCheckTime << std::endl;
 	}
 
-	if (curIterations % _setup.framefreq == 0)
-	{
-		std::stringstream Filename;
-		Filename << _filePrefix << "_" << curIterations / _setup.framefreq << ".obj";
-		igl::writeOBJ(Filename.str(), _state.curPos, _state.mesh.faces());
-	}
-
 	std::string filePathPrefix = _filePrefix + "_convergence/";
 	std::string convergeFileName = filePathPrefix + std::string("elastic_energy.txt");
 	std::ofstream efs;
@@ -717,7 +692,7 @@ void ElasticShellModel::save(int curIterations, TimeCost curTimeCost, double ste
 }
 
 
-void ElasticShellModel::testValueAndGradient(const TVector& x)
+void ElasticShellModel::testValueAndGradient(const Eigen::VectorXd& x)
 {
 	std::cout << "Test value and gradient. " << std::endl;
 	double f = value(x);
@@ -743,11 +718,11 @@ void ElasticShellModel::testValueAndGradient(const TVector& x)
 	}
 }
 
-void ElasticShellModel::testGradientAndHessian(const TVector& x)
+void ElasticShellModel::testGradientAndHessian(const Eigen::VectorXd& x)
 {
 	std::cout << "Test gradient and hessian. " << std::endl;
-	THessian hess;
-	TVector deriv;
+	Eigen::SparseMatrix<double> hess;
+	Eigen::VectorXd deriv;
 
 	auto posHessBackup = _isUsePosHess;
 
@@ -761,7 +736,7 @@ void ElasticShellModel::testGradientAndHessian(const TVector& x)
 	{
 		double eps = std::pow(10, -i);
 		Eigen::VectorXd x1 = x + eps * dir;
-		TVector deriv1;
+		Eigen::VectorXd deriv1;
 		gradient(x1, deriv1);
 
 		std::cout << std::endl << "eps: " << eps << std::endl;
@@ -777,14 +752,14 @@ void ElasticShellModel::testGradientAndHessian(const TVector& x)
 
 void ElasticShellModel::testMaxStep()
 {
-    TVector dir;
+    Eigen::VectorXd dir;
     Eigen::VectorXd temp(12);
     temp.setZero();
     temp(2) = -1;
     temp(5) = -2;
     dir = temp;
 
-    TVector x;
+    Eigen::VectorXd x;
     convertCurState2Variables(_state, x);
 
     for (int i = 0 ; i < 3; i ++)

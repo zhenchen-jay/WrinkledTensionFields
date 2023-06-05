@@ -1,7 +1,7 @@
 #include "SecondFundamentalFormDiscretization.h"
 #include <iostream>
 #include <random>
-#include "../MeshConnectivity.h"
+#include "../MeshLib/MeshConnectivity.h"
 
 void SecondFundamentalFormDiscretization::testSecondFundamentalForm(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F)
 {

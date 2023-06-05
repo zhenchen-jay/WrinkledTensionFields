@@ -1,0 +1,25 @@
+
+{
+	"bending_type" : "quadratic",
+	"clamped_DOFs" : "dress2_clamped_vertices.dat",
+	"collision_eta" : 0.00050,
+	"collision_penalty" : 2000.0,
+	"cur_mesh" : "dress2_simulated.obj",
+	"curedge_DOFs" : "dress2_edgedofs_simulated.txt",
+	"density" : 200.0,
+	"frame_frequency" : 20,
+	"gravity" : [ 0.0, 0.0, -9.800000000000001 ],
+	"init_mesh" : "dress2_guess.obj",
+	"max_stepsize" : 1.0,
+	"num_interpolation" : 1,
+	"obs_mesh" : "dress2_obstacle.obj",
+	"perturb" : 0,
+	"poisson_ratio" : 0.30,
+	"pressure" : 0.0,
+	"rest_flat" : true,
+	"rest_mesh" : "dress2.obj",
+	"stretching_type" : "tensionField",
+	"sff_type" : "midedgeTan",
+	"thickness" : 0.0010,
+	"youngs_modulus" : 100000.0
+}

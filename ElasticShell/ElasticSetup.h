@@ -4,11 +4,15 @@
 #include <vector>
 #include <map>
 #include <Eigen/Sparse>
+#include <memory>
 
-#include "../MeshConnectivity.h"
-#include "../MeshGeometry.h"
+#include "../MeshLib/MeshConnectivity.h"
+#include "../MeshLib/MeshGeometry.h"
 #include "../Obstacle.h"
-#include "../CommonFunctions.h"
+#include "../SecondFundamentalForm/SecondFundamentalFormDiscretization.h"
+#include "../SecondFundamentalForm/MidedgeAngleSinFormulation.h"
+#include "../SecondFundamentalForm/MidedgeAngleTanFormulation.h"
+#include "../SecondFundamentalForm/MidedgeAverageFormulation.h"
 
 
 class ElasticSetup
@@ -32,19 +36,17 @@ public:
 		innerEta = 0;
 		restFlat = true;
 
-		maxStepSize = 0;
+		maxStepSize = 1;
 		perturb = 0;
 		gravity.setZero();
-		framefreq = 1;
+//		framefreq = 1;
 		numInterp = 1;
 
 		abars.clear();
 		bbars.clear();
 		vertArea.clear();
 
-		isNoeHookean = false;
-		tensionField = false;
-
+        strecthingType = "";
 		bendingType = "";
 		sffType = "";
 		restMeshPath = "";
@@ -82,14 +84,14 @@ public:
 
 	double pressure;
 	bool restFlat;
-	bool isNoeHookean;
-	bool tensionField;
+
 	std::string bendingType;
+    std::string strecthingType;
 	
 	double maxStepSize;
 
 	Eigen::Vector3d gravity;
-	int framefreq;
+//	int framefreq;
 	int numInterp; // number of interpolation steps before reaching clamped boundary
 
 	// Derived from the above

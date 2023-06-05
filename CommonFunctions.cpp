@@ -1,10 +1,17 @@
 #include <Eigen/SPQRSupport>
 #include <igl/per_vertex_normals.h>
 #include <iostream>
+#include <filesystem>
 #include "CommonFunctions.h"
-#include "MeshGeometry.h"
-#include "IntrinsicGeometry.h"
-#include "MeshConnectivity.h"
+#include "MeshLib/MeshGeometry.h"
+#include "MeshLib/IntrinsicGeometry.h"
+#include "MeshLib/MeshConnectivity.h"
+
+#ifdef __APPLE__
+namespace fs = std::__fs::filesystem;
+#else
+namespace fs = std::filesystem;
+#endif
 
 Eigen::MatrixXd lowRankApprox(Eigen::MatrixXd A)
 {
@@ -260,173 +267,38 @@ void rigidBodyAlignment(const Eigen::MatrixXd& tarPos, const MeshConnectivity& m
     t = aveTarPos - R*avePos;
 }
 
-bool parse(bool& b, const Json::Value& json) {
-	if (!json.isBool())
-		return false;
-	b = json.asBool();
-	return true;
-}
-bool parse(int& n, const Json::Value& json) {
-	if (!json.isIntegral())
-		return false;
-	n = json.asInt();
-	return true;
-}
-bool parse(double& x, const Json::Value& json) {
-	if (!json.isNumeric())
-		return false;
-	x = json.asDouble();
-	return true;
-}
-bool parse(std::string& s, const Json::Value& json)
+void matToVec(const Eigen::MatrixXd& mat, Eigen::VectorXd& vec)
 {
-	if (!json.isString())
-		return false;
-	s = json.asString();
+	int nverts = mat.rows();
+	vec.resize(3 * nverts);
+	for (int i = 0; i < nverts; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			vec(3 * i + j) = mat(i, j);
+	}
+}
+
+void vecToMat(const Eigen::VectorXd& vec, Eigen::MatrixXd& mat)
+{
+	int nverts = vec.size() / 3;
+	mat.resize(nverts, 3);
+	for (int i = 0; i < nverts; i++)
+	{
+		for (int j = 0; j < 3; j++)
+			mat(i, j) = vec(3 * i + j);
+	}
+}
+
+bool mkdir(const std::string& foldername)
+{
+	if (!fs::exists(foldername))
+	{
+		std::cout << "create directory: " << foldername << std::endl;
+		if (!fs::create_directory(foldername))
+		{
+			std::cerr << "create folder failed." << foldername << std::endl;
+			return false;
+		}
+	}
 	return true;
-}
-
-void generateWTFJson(std::string prefix)
-{
-	std::string matName = prefix + std::string("_material.dat");
-	std::ifstream mfs(matName);
-	if (!mfs)
-	{
-		std::cout << "Missing " << matName << std::endl;
-		return;
-	}
-	double thickness, youngs, poisson, density, penaltyK, pressure, sphereR;
-	Eigen::Vector3d gravity, sphereCenter;
-	bool isTFT;
-	int framefreq, numInterp, bendingType;
-	Json::Value json;
-
-	mfs >> thickness;
-	mfs >> youngs;
-	mfs >> poisson;
-	mfs >> density;
-	mfs >> penaltyK;
-	mfs >> gravity[0] >> gravity[1] >> gravity[2];
-	mfs >> isTFT;
-	mfs >> framefreq;
-	mfs >> sphereCenter[0] >> sphereCenter[1] >> sphereCenter[2];
-	mfs >> sphereR;
-	mfs >> numInterp;
-	mfs >> bendingType;
-	mfs >> pressure;
-
-	json["poisson_ratio"] = poisson;
-	json["thickness"] = thickness;
-	json["youngs_modulus"] = youngs;
-
-	json["nasoq_eps"] = 1e-6;
-	json["quadpoints"] = 3;
-	json["rest_flat"] = true;
-	json["clamp"] = true;
-	json["sff_type"] = "midedgeTan";
-
-	std::string filePrefix = prefix;
-	std::replace(filePrefix.begin(), filePrefix.end(), '\\', '/'); // handle the backslash issue for windows
-
-	int index = filePrefix.rfind("/");
-	std::string modelName = filePrefix.substr(index + 1, filePrefix.length() - 1);
-
-
-	json["rest_mesh"] = modelName + ".obj";
-	json["base_mesh"] = modelName + "_simulated.obj";
-	json["obs_mesh"] = modelName + "_obstacle.obj";
-
-	json["clamped_DOFs"] = modelName + "_clamped_vertices.dat";
-
-	json["dphi_path"] = modelName + "_dphi_simulated.txt";
-	json["amp_path"] = modelName + "_amplitude_simulated.txt";
-	json["phi_path"] = modelName + "_phi_simulated.txt";
-
-	std::ofstream file((prefix + "_WTF.json").c_str());
-	if (!file)
-	{
-		std::cout << "output path doesn't exist." << std::endl;
-		return;
-	}
-	Json::StyledStreamWriter writer;
-	writer.write(file, json);
-	file.close();
-}
-
-void generateElasticJson(std::string prefix)
-{
-	std::string matName = prefix + std::string("_material.dat");
-	std::ifstream mfs(matName);
-	if (!mfs)
-	{
-		std::cout << "Missing " << matName << std::endl;
-		return;
-	}
-	double thickness, youngs, poisson, density, penaltyK, pressure,sphereR;
-	Eigen::Vector3d gravity, sphereCenter;
-	bool isTFT;
-	int framefreq, numInterp, bendingType;
-	Json::Value json;
-
-	mfs >> thickness;
-	mfs >> youngs;
-	mfs >> poisson;
-	mfs >> density;
-	mfs >> penaltyK;
-	mfs >> gravity[0] >> gravity[1] >> gravity[2];
-	mfs >> isTFT;
-	mfs >> framefreq;
-	mfs >> sphereCenter[0] >> sphereCenter[1] >> sphereCenter[2];
-	mfs >> sphereR;
-	mfs >> numInterp;
-	mfs >> bendingType;
-	mfs >> pressure;
-
-	json["poisson_ratio"] = poisson;
-	json["thickness"] = thickness;
-	json["youngs_modulus"] = youngs;
-	json["density"] = density;
-	json["collision_penalty"] = penaltyK;
-	json["perturb"] = 0;
-	json["pressure"] = pressure;
-	json["collision_eta"] = 0.5 * thickness;
-	json["rest_flat"] = true;
-	json["isNeoHookean"] = false;
-	json["isTFT"] = isTFT;
-	json["bending_type"] = bendingType == 0 ? "elastic" : "quadratic";
-	if (bendingType == 2)
-		json["bending_type"] = "None";
-
-	json["sff_type"] = "midedgeTan";
-	json["max_stepsize"] = 1.0;
-	json["gravity"].resize(3);
-	for (int i = 0; i < 3; i++)
-		json["gravity"][i] = gravity(i);
-
-	json["frame_frequency"] = framefreq;
-	json["num_interpolation"] = numInterp;
-
-	std::string filePrefix = prefix;
-	std::replace(filePrefix.begin(), filePrefix.end(), '\\', '/'); // handle the backslash issue for windows
-
-	int index = filePrefix.rfind("/");
-	std::string modelName = filePrefix.substr(index + 1, filePrefix.length() - 1);
-
-	json["rest_mesh"] = modelName + ".obj";
-	json["init_mesh"] = modelName + "_guess.obj";
-	json["cur_mesh"] = modelName + "_simulated.obj";
-	json["obs_mesh"] = modelName + "_obstacle.obj";
-
-	json["curedge_DOFs"] = modelName + "_edgedofs_simulated.txt";
-	json["clamped_DOFs"] = modelName + "_clamped_vertices.dat";
-
-	std::ofstream file((prefix + "_Elastic.json").c_str());
-	if (!file)
-	{
-		std::cout << "output path doesn't exist." << std::endl;
-		return;
-	}
-	Json::StyledStreamWriter writer;
-	writer.write(file, json);
-	file.close();
 }

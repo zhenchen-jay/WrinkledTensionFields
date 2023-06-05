@@ -5,13 +5,18 @@ build_clion/
 build_*/
 cmake-build-*/
 
+cmake/FindMKL.cmake
+
 # Editor and OS things
 imgui.ini
 .DS_Store
 .vscode
+.vs
 *.swp
 tags
 *.blend1
+*.polyscope.ini
+.idea/*
 
 # Prerequisites
 *.d

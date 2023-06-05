@@ -2,15 +2,10 @@
 #include <memory>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
-#include "../external/cppoptlib/problem.h"
-#include "../external/cppoptlib/meta.h"
 #include "ElasticSetup.h"
 #include "ElasticState.h"
 #include "../SecondFundamentalForm/SecondFundamentalFormDiscretization.h"
 #include "../CommonFunctions.h"
-
-using namespace cppoptlib;
-using Eigen::VectorXd;
 
 class Projection
 {
@@ -29,32 +24,28 @@ private:
     bool isPorjNeeded;
 };
 
-class ElasticShellModel : public Problem<double>
+class ElasticShellModel
 {
 public:
-    using typename cppoptlib::Problem<double>::Scalar;
-    using typename cppoptlib::Problem<double>::TVector;
-    using typename cppoptlib::Problem<double>::THessian;
+    bool initialization(const ElasticSetup setup, const ElasticState initialGuess, std::string filePrefix, bool posHess = true, bool isParallel = true);
+    void convertCurState2Variables(const ElasticState curState, Eigen::VectorXd& x);
+    void convertVariables2CurState(const Eigen::VectorXd x, ElasticState& curState);
 
-    bool initialization(const ElasticSetup setup, const ElasticState initialGuess, std::string filePrefix, double interp = 1.0, bool posHess = true, bool isParallel = true);
-    void convertCurState2Variables(const ElasticState curState, TVector& x);
-    void convertVariables2CurState(const TVector x, ElasticState& curState);
+    double value(const Eigen::VectorXd& x);
+    double stretchingValue(const Eigen::VectorXd& x);
+    double bendingValue(const Eigen::VectorXd& x);
+    double penaltyValue(const Eigen::VectorXd& x);
 
-    double value(const TVector& x);
-    double stretchingValue(const TVector& x);
-    double bendingValue(const TVector& x);
-    double penaltyValue(const TVector& x);
-
-    void gradient(const TVector& x, TVector& grad);
-    void hessian(const TVector& x, THessian& hessian);
+    void gradient(const Eigen::VectorXd& x, Eigen::VectorXd& grad);
+    void hessian(const Eigen::VectorXd& x, Eigen::SparseMatrix<double>& hessian);
 
     //max step before touching the obstacles
-    double getMaxStep(const TVector& x, const TVector& dir, double step);
+    double getMaxStep(const Eigen::VectorXd& x, const Eigen::VectorXd& dir, double step);
     void testMaxStep();
 
     void save(int curIterations, TimeCost curTimeCost, double stepsize, double oldEnergy, double curEnergy, double gradnorm, double dirnorm, double reg, bool PSDHess);
 
-    Eigen::VectorXd getFullDir(const TVector& dir)
+    Eigen::VectorXd getFullDir(const Eigen::VectorXd& dir)
     {
         Eigen::VectorXd ret;
         _proj.unprojectVector(dir, ret);
@@ -63,11 +54,11 @@ public:
 
     Eigen::SparseMatrix<double> buildLinearConstraints();
 
-    void testValueAndGradient(const TVector& x);
-    void testGradientAndHessian(const TVector& x);
+    void testValueAndGradient(const Eigen::VectorXd& x);
+    void testGradientAndHessian(const Eigen::VectorXd& x);
 
     void setProjM();
-    Eigen::VectorXd fullGradient(const TVector& grad)
+    Eigen::VectorXd fullGradient(const Eigen::VectorXd& grad)
     {
         Eigen::VectorXd ret;
         _proj.unprojectVector(grad, ret);
@@ -85,7 +76,7 @@ public:
     double _lameAlpha;
     double _lameBeta;
     std::string _filePrefix;
-    double _interp;
+//    double _interp;
     bool _isC2;
     bool _isUsePosHess;
     bool _isParallel;

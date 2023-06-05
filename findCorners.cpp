@@ -1,5 +1,5 @@
 #include "findCorners.h"
-#include "MeshConnectivity.h"
+#include "MeshLib/MeshConnectivity.h"
 #include <deque>
 #include <vector>
 #include <iostream>

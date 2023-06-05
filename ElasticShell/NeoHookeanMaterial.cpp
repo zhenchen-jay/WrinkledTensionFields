@@ -1,4 +1,5 @@
 #include "NeoHookeanMaterial.h"
+#include "../CommonFunctions.h"
 
 double NeoHookeanMaterial::stretchingEnergy(
     const MeshConnectivity &mesh,

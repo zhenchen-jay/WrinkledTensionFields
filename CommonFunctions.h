@@ -10,14 +10,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
-#include <json/json.h>
 
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_for.h"
-
-#ifndef GRAIN_SIZE
-#define GRAIN_SIZE 10
-#endif
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_for.h>
 
 #include "SecondFundamentalForm/SecondFundamentalFormDiscretization.h"
 #include "SecondFundamentalForm/MidedgeAngleSinFormulation.h"
@@ -32,16 +27,11 @@ struct QuadraturePoints
 };
 
 
-enum ElasticMaterialType
-{
-	StVK = 0,
-	NeoHookean = 1
-};
-
 enum StretchingType
 {
-	elasticStretching = 0,
+	StVK = 0,
 	tensionField = 1,
+	NeoHookean = 2
 };
 
 enum BendingType
@@ -109,13 +99,9 @@ void trivialOffset(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, Eigen::Ma
 
 void rigidBodyAlignment(const Eigen::MatrixXd& tarPos, const MeshConnectivity& mesh, const Eigen::MatrixXd &pos, Eigen::Matrix3d &R, Eigen::Vector3d &t); // implement a really naive iterative closest point (ICP) algorithm for rigid body alignment.
 
-// Basic data types, adapted from arcsim
-bool parse(bool&, const Json::Value&);
-bool parse(int&, const Json::Value&);
-bool parse(double&, const Json::Value&);
-bool parse(std::string&, const Json::Value&);
+void matToVec(const Eigen::MatrixXd& mat, Eigen::VectorXd& vec);
+void vecToMat(const Eigen::VectorXd& vec, Eigen::MatrixXd& mat);
 
-// generate json files
-void generateWTFJson(std::string prefix);
-void generateElasticJson(std::string prefix);
+bool mkdir(const std::string& foldername);
+
 #endif

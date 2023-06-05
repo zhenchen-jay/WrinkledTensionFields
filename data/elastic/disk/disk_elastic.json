@@ -1,0 +1,27 @@
+{
+    "bending_type": "quadratic",
+    "clamped_DOFs": "disk_clamped_vertices.dat",
+    "collision_eta": 5e-05,
+    "collision_penalty": 0.0,
+    "cur_mesh": "disk_simulated.obj",
+    "curedge_DOFs": "disk_edgedofs_simulated.txt",
+    "density": 1000.0,
+    "gravity": [
+        0.0,
+        0.0,
+        0.0
+    ],
+    "init_mesh": "disk_guess.obj",
+    "max_stepsize": 1.0,
+    "num_interpolation": 1,
+    "obs_mesh": "disk_obstacle.obj",
+    "perturb": 0.0,
+    "poisson_ratio": 0.44,
+    "pressure": 600.0,
+    "rest_flat": true,
+    "rest_mesh": "disk.obj",
+    "sff_type": "midedgeTan",
+    "stretching_type": "tensionField",
+    "thickness": 0.0001,
+    "youngs_modulus": 10000000.0
+}

@@ -5,8 +5,11 @@
 #include <set>
 #include <igl/principal_curvature.h>
 
-#include "../MeshConnectivity.h"
-#include "../CommonFunctions.h"
+#include "../MeshLib/MeshConnectivity.h"
+#include "../SecondFundamentalForm/SecondFundamentalFormDiscretization.h"
+#include "../SecondFundamentalForm/MidedgeAngleSinFormulation.h"
+#include "../SecondFundamentalForm/MidedgeAngleTanFormulation.h"
+#include "../SecondFundamentalForm/MidedgeAverageFormulation.h"
 
 struct ElasticState
 {

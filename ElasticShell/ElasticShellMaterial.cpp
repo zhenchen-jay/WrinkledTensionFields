@@ -13,8 +13,8 @@
 #include <igl/boundary_loop.h>
 
 #include "ElasticShellMaterial.h"
-#include "../MeshConnectivity.h"
-#include "../GeometryDerivatives.h"
+#include "../MeshLib/MeshConnectivity.h"
+#include "../MeshLib/GeometryDerivatives.h"
 
 double ElasticShellMaterial::cotan_v0(const Eigen::Vector3d v0, const Eigen::Vector3d v1, const Eigen::Vector3d v2)
 {

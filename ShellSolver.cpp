@@ -2,16 +2,59 @@
 #include <igl/writeOBJ.h>
 #include <igl/readOBJ.h>
 #include "ShellSolver.h"
-#include "WTFShell/WTFShell.h"
+#include "Optimization/NewtonDescent.h"
+#include "Optimization/NASOQSQP.h"
 
-void ShellSolver::WTFSQPSolver(const WTFSetup& setup, WTFState& curState, std::string filePrefix, const WTFOptimizationParams params)
+
+void ShellSolver::fullSimNewtonStaticSolver(const ElasticSetup& setup, ElasticState& curState, std::string filePrefix, const FullSimOptimizationParams& params)
 {
-	std::cout << "init amp norm: " << curState.amplitude.norm() << std::endl;
-	std::cout << "init dphi norm: " << curState.dphi.norm() << std::endl;
+	ElasticShellModel model;
+	bool ok = model.initialization(setup, curState, filePrefix, params.isProjH, params.isParallel);
+	if (!ok)
+    {
+        std::cout << "initialization failed." << std::endl;
+        return;
+    }
 
-	int nverts = curState.basePos.rows();
-	int nedges = curState.baseMesh.nEdges();
+	Eigen::VectorXd initX;
+	Eigen::MatrixXi F;
+	model.convertCurState2Variables(curState, initX);
+	double energy = model.value(initX);
 
+	Eigen::VectorXd grad;
+	model.gradient(initX, grad);
+
+	if(params.printLog)
+	{
+		std::cout << "started energy: " << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << energy << ", ||g|| = " << grad.template lpNorm<Eigen::Infinity>() << std::endl;
+	}
+
+
+	if(grad.norm() < params.gradNorm)
+	{
+		if(params.printLog)
+			std::cout << "init gradient norm is small" << std::endl;
+		return;
+	}
+
+    auto elasticFunc = [&](const Eigen::VectorXd& x, Eigen::VectorXd* deriv, Eigen::SparseMatrix<double>* hess, bool isProj)
+    {
+        model._isUsePosHess = isProj;
+        double energy = model.value(x);
+
+        if(deriv)
+            model.gradient(x, *deriv);
+        if (hess)
+            model.hessian(x, *hess);
+        return energy;
+    };
+
+    OptSolver::newtonSolver(elasticFunc, initX, params.iterations, params.gradNorm, params.xDelta, params.fDelta, params.printLog);
+    model.convertVariables2CurState(initX, curState);
+}
+
+void ShellSolver::TFWSQPSolver(const TFWSetup& setup, TFWState& curState, std::string filePrefix, const TFWOptimizationParams& params)
+{
 	std::map<int, double> clampedDOFs;
 
 	if (setup.clampedChosenVerts) // whether we clamped the vertices which were clamped in the TFT step
@@ -26,11 +69,12 @@ void ShellSolver::WTFSQPSolver(const WTFSetup& setup, WTFState& curState, std::s
 
 	if (curState.amplitude.minCoeff() < 0)
 	{
-		std::cout << "negative amplitude, use abs value instead!" << std::endl;
+		if(params.printLog)
+			std::cout << "negative amplitude, use abs value instead!" << std::endl;
 		curState.amplitude = curState.amplitude.cwiseAbs();
 	}
 
-	WTFModel model;
+	TFWModel model;
 	model.initialization(setup, curState, &clampedDOFs, filePrefix, true, params.isParallel);
 
 	Eigen::VectorXd initX;
@@ -38,79 +82,50 @@ void ShellSolver::WTFSQPSolver(const WTFSetup& setup, WTFState& curState, std::s
 	std::cout << initX.norm() << std::endl;
 
 	auto C = model.buildIntegrabilityConstraints();
-	//model.checkPD4ConstraintedHess(initX);
 	double energy = model.value(initX);
 
-	std::cout << "initial residual of integrabilty : " << (C * initX).norm() << std::endl;
-	std::cout << "started energy: " << energy << std::endl;
-
-	model.testGradientAndHessian(initX);
-	model.testValueAndGradient(initX);
-
-	cppoptlib::NASOQSolver<WTFModel> solver;
-	cppoptlib::Criteria<double> s;
-	s.iterations = params.iterations;
-	s.fDelta = params.fDelta;
-	s.gradNorm = params.gradNorm;
-	s.xDelta = params.xDelta;
-	solver.setStopCriteria(s);
-	std::cout << "Stop Criteria: " << std::endl;
-	std::cout << "Max iterations: " << s.iterations << ", ||g|| = " << s.gradNorm << ", ||delta_f|| = " << s.fDelta << ", ||delta_x|| = " << s.xDelta << std::endl;
-	
-	solver.minimize(model, initX);
-	std::cout << "final residual of integrabilty : " << (C * initX).norm() << std::endl;
-
-	model.convertVariables2CurState(initX, curState);
-	curState.getWrinkleMesh(setup);
-}
-
-void ShellSolver::fullSimNewtonStaticSolver(const ElasticSetup& setup, ElasticState& curState, std::string filePrefix, const FullSimOptimizationParams params)
-{
-	ElasticShellModel model;
-	bool ok = model.initialization(setup, curState, filePrefix, params.interp, params.isProjH, params.isParallel);
-	if (!ok)
-    {
-        std::cout << "initialization failed." << std::endl;
-        return;
-    }
-
-	Eigen::VectorXd initX;
-	std::cout<<"initialization finished!"<<std::endl;
-	Eigen::MatrixXi F;
-	//igl::readOBJ("C:/Users/csyzz/Projects/tensionField/Sims/dress/MD/dress_simulated_1.obj", curState.curPos, F);
-   
-	model.convertCurState2Variables(curState, initX);
-	std::cout<<"convertion finished!"<<std::endl;
-	double energy = model.value(initX);
-
-	Eigen::VectorXd grad;
-	model.gradient(initX, grad);
-
-	std::cout << "started energy: " << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << energy << ", ||g|| = " << grad.template lpNorm<Eigen::Infinity>() << std::endl;
-
-	if(grad.norm() < params.gradNorm)
+	if(params.printLog)
 	{
-		std::cout << "init gradient norm is small" << std::endl;
-		return;
+		std::cout << "initial residual of integrabilty : " << (C * initX).norm() << std::endl;
+		std::cout << "started energy: " << energy << std::endl;
 	}
-	cppoptlib::NewtonDescentSolver<ElasticShellModel> newtonsolver;
 
-	cppoptlib::Criteria<double> s;
-	s.iterations = params.iterations;
-	s.fDelta = params.fDelta;
-	s.gradNorm = params.gradNorm;
-	s.xDelta = params.xDelta;
-	// if(setup.tensionField) 
-	// 	s.fDelta = 1e-10;
-	newtonsolver.setStopCriteria(s);
-	std::cout << "Stop Criteria: " << std::endl;
-	std::cout << "Max iterations: " << s.iterations << ", ||g|| = " << s.gradNorm << ", ||delta_f|| = " << s.fDelta << ", ||delta_x|| = " << s.xDelta << std::endl;
 
-	newtonsolver.minimize(model, initX);
-	energy = model.value(initX);
-	model.gradient(initX, grad);
-	std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << "end energy: " << energy << ", ||grad||: " << grad.norm() << std::endl;
+	auto elasticFunc = [&](const Eigen::VectorXd& x, Eigen::VectorXd* deriv, Eigen::SparseMatrix<double>* hess, bool isProj)
+	{
+		model._isUsePosHess = isProj;
+		double energy = model.value(x);
+
+		if(deriv)
+			model.gradient(x, *deriv);
+		if (hess)
+			model.hessian(x, *hess);
+		return energy;
+	};
+
+	auto buildConstraints = [&](const Eigen::VectorXd& x, Eigen::SparseMatrix<double>& Aeq, Eigen::VectorXd& Beq, Eigen::SparseMatrix<double>& Aineq, Eigen::VectorXd& Bineq)
+	{
+		Aeq = C;
+		int nFreeAmps = model.nFreeAmp();
+		std::vector<Eigen::Triplet<double>> AineqCoeff;
+		AineqCoeff.clear();
+		for (int i = 0; i < nFreeAmps; i++)
+		{
+			AineqCoeff.emplace_back(i, i, -1.0);    // amp >= 0 <=> -amp <= 0
+		}
+		Aineq.resize(nFreeAmps, x.size());
+		Aineq.setFromTriplets(AineqCoeff.begin(), AineqCoeff.end());
+
+		Beq = Eigen::VectorXd::Zero(Aeq.rows());
+		Bineq = Eigen::VectorXd::Zero(Aineq.rows());
+		return;
+	};
+
+	OptSolver::NASOQ_SQPSolver(elasticFunc, initX, buildConstraints, params.iterations, params.gradNorm, params.xDelta, params.fDelta, params.printLog);
+
+	if(params.printLog)
+	{
+		std::cout << "final residual of integrabilty : " << (C * initX).norm() << std::endl;
+	}
 	model.convertVariables2CurState(initX, curState);
-	model.convertCurState2Variables(curState, initX);
-
 }

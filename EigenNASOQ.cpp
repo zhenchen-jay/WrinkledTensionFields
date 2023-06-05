@@ -1,9 +1,9 @@
-#include <nasoq_eigen.h>
-#include <unsupported/Eigen/SparseExtra>
-
+#include <nasoq/nasoq.h>
+#include <nasoq/nasoq_eigen.h>
 #include <fstream>
 #include <iostream>
 #include "EigenNASOQ.h"
+#include <iomanip>
 
 void EigenNASOQSparse::printSolverReturn(int converged)
 {
@@ -300,165 +300,6 @@ int EigenNASOQSparse::linear_solve(
 
 }
 
-/*
-QPFormatConverter* getQPFC(const Eigen::SparseMatrix<double>& Q, const Eigen::VectorXd& C,
-    const Eigen::SparseMatrix<double>& Aeq, const Eigen::VectorXd& Beq,
-    const Eigen::SparseMatrix<double>& Aineq, const Eigen::VectorXd& Bineq,
-    const Eigen::VectorXd& XL, const Eigen::VectorXd& XU)
-{
-    QPFormatConverter* QPFC = new QPFormatConverter();
-    QPFC->H = new CSC;
-    CSC* H_tmp = new CSC;
-    QPFC->A_eq = new CSC;
-    QPFC->A_ineq = new CSC;
-    QPFC->AT_eq = new CSC;
-    QPFC->AT_ineq = new CSC;
-
-    if (!symMatrix2QPF(Q, H_tmp->ncol, H_tmp->nzmax, H_tmp->p, H_tmp->i, H_tmp->x))
-    {
-        std::cout << "Error in converting Q to NASOQ form" << std::endl;
-        return NULL;
-    }
-   
-    bool is_expanded = expandMatrix(H_tmp->ncol, H_tmp->nzmax, H_tmp->p,
-        H_tmp->i, H_tmp->x,
-        QPFC->H->nzmax, QPFC->H->p,
-        QPFC->H->i, QPFC->H->x);
-    if (is_expanded)
-    {
-        //H has the expanded version already.
-        QPFC->H->ncol = QPFC->H->nrow = H_tmp->ncol;
-        allocateAC(H_tmp, 0, 0, 0, FALSE);
-    }
-    else
-    {
-        QPFC->H->x = H_tmp->x;
-        QPFC->H->p = H_tmp->p;
-        QPFC->H->i = H_tmp->i;
-        QPFC->H->nzmax = H_tmp->nzmax;
-        QPFC->H->ncol = QPFC->H->nrow = H_tmp->ncol;
-    }
-    QPFC->H->nzmax = QPFC->H->p[QPFC->H->ncol];
-    QPFC->H->stype = -1;
-    QPFC->H->packed = 1;
-
-    QPFC->q = new double[QPFC->H->ncol];
-    vector2QPF(C, QPFC->H->ncol, QPFC->q);
-    
-
-    delete H_tmp;
-
-    if (Aeq.rows() > 0) // get the euality constraints
-    {
-        if (!matrix2QPF(Aeq, QPFC->A_eq->nrow, QPFC->A_eq->ncol, QPFC->A_eq->nzmax, QPFC->A_eq->p, QPFC->A_eq->i, QPFC->A_eq->x))
-        {
-            std::cout << "Error in convert Aeq to NASOQ form" << std::endl;
-            return NULL;
-        }
-        QPFC->num_eq = QPFC->A_eq->nrow;
-        QPFC->a_eq = new double[QPFC->A_eq->nrow];
-        vector2QPF(Beq, QPFC->A_eq->nrow, QPFC->a_eq);
-        transpose_unsym(QPFC->A_eq->nrow, QPFC->A_eq->ncol, QPFC->A_eq->p, QPFC->A_eq->i,
-            QPFC->A_eq->x, QPFC->AT_eq->nrow, QPFC->AT_eq->ncol, QPFC->AT_eq->p, QPFC->AT_eq->i,
-            QPFC->AT_eq->x);
-    }
-    else
-    {
-        QPFC->A_eq->nzmax = QPFC->A_eq->nrow = QPFC->A_eq->ncol = 0;
-        QPFC->A_eq->p = QPFC->A_eq->i = NULL;
-        QPFC->A_eq->x = QPFC->a_eq = NULL;
-        QPFC->num_eq = 0;
-    }
-
-    // combine lower and bound constriant with inequality constraints
-    std::vector<Eigen::Triplet<double>> AineqCoeff;
-    AineqCoeff.clear();
-    std::vector<double> extendedBineq;
-    extendedBineq.clear();
-    int curIneqs = Aineq.rows();
-    if (curIneqs > 0)
-    {
-        for (int i = 0; i < Aineq.outerSize(); i++)
-            for (typename Eigen::SparseMatrix<double>::InnerIterator it(Aineq, i); it; ++it)
-                AineqCoeff.emplace_back(it.row(), it.col(), it.value());
-
-        Eigen::VectorXd denseBineq = Bineq;
-
-        for (int i = 0; i < curIneqs; i++)
-            extendedBineq.push_back(denseBineq(i));
-    }
-    
-    if (XL.rows() > 0)
-    {
-        for (int i = 0; i < XL.rows(); i++)
-        {
-            if (XL(i) == -std::numeric_limits<double>::infinity())
-                continue;
-            AineqCoeff.emplace_back(curIneqs, i, -1.0);
-            extendedBineq.push_back(-XL(i));
-            curIneqs++;
-        }
-    }
-
-
-    if (XU.rows() > 0)
-    {
-        for (int i = 0; i < XU.rows(); i++)
-        {
-            if (XU(i) == std::numeric_limits<double>::infinity())
-                continue;
-            AineqCoeff.emplace_back(curIneqs, i, 1.0);
-            extendedBineq.push_back(XU(i));
-            curIneqs++;
-        }
-    }
- 
-    Eigen::SparseMatrix<double> newAineq(curIneqs, Q.cols());
-    newAineq.setFromTriplets(AineqCoeff.begin(), AineqCoeff.end());
-
-    Eigen::VectorXd newBineq(curIneqs);
-    for (int i = 0; i < extendedBineq.size(); i++)
-    {
-        newBineq(i) = extendedBineq[i];
-    }
-    
-    if (curIneqs > 0)
-    {
-        if (!matrix2QPF(newAineq, QPFC->A_ineq->nrow, QPFC->A_ineq->ncol, QPFC->A_ineq->nzmax, QPFC->A_ineq->p, QPFC->A_ineq->i, QPFC->A_ineq->x))
-        {
-            std::cout << "Error in convert Aineq to NASOQ form" << std::endl;
-            return NULL;
-        }
-
-        if (QPFC->A_ineq->nrow > 0)
-        {
-            QPFC->A_ineq->nzmax = QPFC->A_ineq->p[QPFC->A_ineq->ncol];
-            QPFC->num_ineq = QPFC->A_ineq->nrow;
-
-            QPFC->a_ineq = new double[QPFC->A_ineq->nrow];
-            vector2QPF(newBineq, QPFC->A_ineq->nrow, QPFC->a_ineq);
-            transpose_unsym(QPFC->A_ineq->nrow, QPFC->A_ineq->ncol, QPFC->A_ineq->p, QPFC->A_ineq->i,
-                QPFC->A_ineq->x, QPFC->AT_ineq->nrow, QPFC->AT_ineq->ncol, QPFC->AT_ineq->p,
-                QPFC->AT_ineq->i, QPFC->AT_ineq->x);
-
-
-        }
-        else
-        {
-            QPFC->A_ineq->nzmax = QPFC->A_ineq->nrow = QPFC->A_ineq->ncol = 0;
-            QPFC->A_ineq->p = QPFC->A_ineq->i = NULL;
-            QPFC->A_ineq->x = QPFC->a_ineq = NULL;
-            QPFC->num_ineq = 0;
-        }
-
-    }
-
-    QPFC->mode = 0;
-    return QPFC;
-}
-*/
-
-
 void EigenNASOQSparse::writeSymMatrix(const Eigen::SparseMatrix<double> H, std::string filename)
 {
     std::vector<int> m_rows;
@@ -606,6 +447,7 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
 		double& diag_perturbation,
 		Eigen::VectorXd& X, Eigen::VectorXd& dualy, Eigen::VectorXd& dualz)
 {
+
     Eigen::SparseMatrix<double> Qlower = Eigen::SparseMatrix<double>(Q.triangularView<Eigen::Lower>());
     nasoq::QPSettings qpsettings;
     qpsettings.eps = _accThresh;
@@ -625,19 +467,6 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
             break;
         if(converged == nasoq::nasoq_status::Infeasible) // the problem is unbounded, increase the reg to make the Q to be more PD
             break;
-
-        std::string fileCong = "config" + std::to_string(i) + ".txt";
-        std::ofstream conf(fileCong);
-        if(conf)
-        {
-            conf<< "varaint: " << qpsettings.nasoq_variant << ", diag_pertube: " << qpsettings.diag_perturb << ", eps: " << qpsettings.eps << ", inner_iter_ref: " << qpsettings.inner_iter_ref << ", outer_iter_ref: " << qpsettings.outer_iter_ref << std::endl;
-        }
-        writeSymMatrix(Q, "H" + std::to_string(i) + ".txt");
-        writeVector(C, "q" + std::to_string(i) + ".txt");
-        writeMatrix(Aeq, "Aeq" + std::to_string(i) + ".txt");
-        writeVector(Beq, "Beq" + std::to_string(i) + ".txt");
-        writeMatrix(Aineq, "Aineq" + std::to_string(i) + ".txt");
-        writeVector(Bineq, "Bineq" + std::to_string(i) + ".txt");
         if (qpsettings.diag_perturb < 1e-6)
         {
             qpsettings.diag_perturb *= 10;
@@ -661,12 +490,6 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
             {
                 conf<< "varaint: " << qpsettings.nasoq_variant << ", diag_pertube: " << qpsettings.diag_perturb << ", eps: " << qpsettings.eps << ", inner_iter_ref: " << qpsettings.inner_iter_ref << ", outer_iter_ref: " << qpsettings.outer_iter_ref << std::endl;
             }
-            writeSymMatrix(Q, "H_notDescent.txt");
-            writeVector(C, "q_notDescent.txt");
-            writeMatrix(Aeq, "Aeq_notDescent.txt");
-            writeVector(Beq, "Beq_notDescent.txt");
-            writeMatrix(Aineq, "Aineq_notDescent.txt");
-            writeVector(Bineq, "Bineq_notDescent.txt");
         }
         return true;
         
@@ -685,12 +508,6 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
         {
             conf<< "varaint: " << qpsettings.nasoq_variant << ", diag_pertube: " << qpsettings.diag_perturb << ", eps: " << qpsettings.eps << ", inner_iter_ref: " << qpsettings.inner_iter_ref << ", outer_iter_ref: " << qpsettings.outer_iter_ref << std::endl;
         }
-        writeSymMatrix(Q, "H.txt");
-        writeVector(C, "q.txt");
-        writeMatrix(Aeq, "Aeq.txt");
-        writeVector(Beq, "Beq.txt");
-        writeMatrix(Aineq, "Aineq.txt");
-        writeVector(Bineq, "Bineq.txt");
         return false;
     }
 }
@@ -781,12 +598,6 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
         {
             conf<< "varaint: " << qpsettings.nasoq_variant << ", diag_pertube: " << qpsettings.diag_perturb << ", eps: " << qpsettings.eps << ", inner_iter_ref: " << qpsettings.inner_iter_ref << ", outer_iter_ref: " << qpsettings.outer_iter_ref << std::endl;
         }
-        writeSymMatrix(Q, "H" + std::to_string(i) + ".txt");
-        writeVector(C, "q" + std::to_string(i) + ".txt");
-        writeMatrix(Aeq, "Aeq" + std::to_string(i) + ".txt");
-        writeVector(Beq, "Beq" + std::to_string(i) + ".txt");
-        writeMatrix(newAineq, "Aineq" + std::to_string(i) + ".txt");
-        writeVector(newBineq, "Bineq" + std::to_string(i) + ".txt");
         if (qpsettings.diag_perturb < 1e-6)
         {
             qpsettings.diag_perturb *= 10;
@@ -810,12 +621,6 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
             {
                 conf<< "varaint: " << qpsettings.nasoq_variant << ", diag_pertube: " << qpsettings.diag_perturb << ", eps: " << qpsettings.eps << ", inner_iter_ref: " << qpsettings.inner_iter_ref << ", outer_iter_ref: " << qpsettings.outer_iter_ref << std::endl;
             }
-            writeSymMatrix(Q, "H_notDescent.txt");
-            writeVector(C, "q_notDescent.txt");
-            writeMatrix(Aeq, "Aeq_notDescent.txt");
-            writeVector(Beq, "Beq_notDescent.txt");
-            writeMatrix(newAineq, "Aineq_notDescent.txt");
-            writeVector(newBineq, "Bineq_notDescent.txt");
         }
         return true;
         
@@ -834,12 +639,6 @@ bool EigenNASOQSparse::solve(const Eigen::SparseMatrix<double>& Q, const Eigen::
         {
             conf<< "varaint: " << qpsettings.nasoq_variant << ", diag_pertube: " << qpsettings.diag_perturb << ", eps: " << qpsettings.eps << ", inner_iter_ref: " << qpsettings.inner_iter_ref << ", outer_iter_ref: " << qpsettings.outer_iter_ref << std::endl;
         }
-        writeSymMatrix(Q, "H.txt");
-        writeVector(C, "q.txt");
-        writeMatrix(Aeq, "Aeq.txt");
-        writeVector(Beq, "Beq.txt");
-        writeMatrix(newAineq, "Aineq.txt");
-        writeVector(newBineq, "Bineq.txt");
         return false;
     }
 }

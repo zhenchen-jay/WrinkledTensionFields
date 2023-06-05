@@ -3,8 +3,9 @@
 #include <igl/cotmatrix.h>
 #include <igl/massmatrix.h>
 
-#include "../GeometryDerivatives.h"
-#include "../MeshConnectivity.h"
+#include "../MeshLib/GeometryDerivatives.h"
+#include "../MeshLib/MeshConnectivity.h"
+#include "../CommonFunctions.h"
 
 #include "ElasticSetup.h"
 

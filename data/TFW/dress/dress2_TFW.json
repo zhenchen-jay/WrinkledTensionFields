@@ -1,0 +1,18 @@
+
+{
+	"amp_path" : "dress2_amplitude_simulated.txt",
+	"base_mesh" : "dress2_simulated.obj",
+	"clamp" : true,
+	"clamped_DOFs" : "dress2_clamped_vertices.dat",
+	"dphi_path" : "dress2_dphi_simulated.txt",
+	"nasoq_eps" : 1.000000000000000e-06,
+	"obs_mesh" : "dress2_obstacle.obj",
+	"phi_path" : "dress2_phi_simulated.txt",
+	"poisson_ratio" : 0.30,
+	"quadpoints" : 3,
+	"rest_flat" : true,
+	"rest_mesh" : "dress2.obj",
+	"sff_type" : "midedgeTan",
+	"thickness" : 0.0010,
+	"youngs_modulus" : 100000.0
+}

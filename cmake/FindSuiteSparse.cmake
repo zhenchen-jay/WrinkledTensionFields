@@ -205,6 +205,7 @@ list(APPEND SUITESPARSE_CHECK_LIBRARY_DIRS
   /opt/local/lib/ufsparse # Mac OS X
   /usr/local/homebrew/lib # Mac OS X
   /usr/local/lib
+  
   /usr/lib)
 # Additional suffixes to try appending to each search path.
 list(APPEND SUITESPARSE_CHECK_PATH_SUFFIXES
@@ -284,20 +285,20 @@ endmacro()
 unset(SUITESPARSE_FOUND_REQUIRED_VARS)
 
 # BLAS.
-find_package(BLAS QUIET)
-if (NOT BLAS_FOUND)
-  suitesparse_report_not_found(
-    "Did not find BLAS library (required for SuiteSparse).")
-endif (NOT BLAS_FOUND)
-list(APPEND SUITESPARSE_FOUND_REQUIRED_VARS BLAS_FOUND)
+# find_package(BLAS QUIET)
+# if (NOT BLAS_FOUND)
+#   suitesparse_report_not_found(
+#     "Did not find BLAS library (required for SuiteSparse).")
+# endif (NOT BLAS_FOUND)
+# list(APPEND SUITESPARSE_FOUND_REQUIRED_VARS BLAS_FOUND)
 
-# LAPACK.
-find_package(LAPACK QUIET)
-if (NOT LAPACK_FOUND)
-  suitesparse_report_not_found(
-    "Did not find LAPACK library (required for SuiteSparse).")
-endif (NOT LAPACK_FOUND)
-list(APPEND SUITESPARSE_FOUND_REQUIRED_VARS LAPACK_FOUND)
+# # LAPACK.
+# find_package(LAPACK QUIET)
+# if (NOT LAPACK_FOUND)
+#   suitesparse_report_not_found(
+#     "Did not find LAPACK library (required for SuiteSparse).")
+# endif (NOT LAPACK_FOUND)
+# list(APPEND SUITESPARSE_FOUND_REQUIRED_VARS LAPACK_FOUND)
 
 suitesparse_find_component(AMD REQUIRED FILES amd.h LIBRARIES amd)
 suitesparse_find_component(CAMD REQUIRED FILES camd.h LIBRARIES camd)
@@ -306,11 +307,12 @@ suitesparse_find_component(CCOLAMD REQUIRED FILES ccolamd.h LIBRARIES ccolamd)
 suitesparse_find_component(CHOLMOD REQUIRED FILES cholmod.h LIBRARIES cholmod)
 suitesparse_find_component(
   SUITESPARSEQR REQUIRED FILES SuiteSparseQR.hpp LIBRARIES spqr)
+
 if (SUITESPARSEQR_FOUND)
   # SuiteSparseQR may be compiled with Intel Threading Building Blocks,
   # we assume that if TBB is installed, SuiteSparseQR was compiled with
   # support for it, this will do no harm if it wasn't.
-  find_package(TBB QUIET)
+  # find_package(TBB QUIET)
   if (TBB_FOUND)
     message(STATUS "Found Intel Thread Building Blocks (TBB) library "
       "(${TBB_VERSION}) assuming SuiteSparseQR was compiled "
@@ -433,7 +435,7 @@ if (SUITESPARSE_CONFIG_FOUND)
 endif (SUITESPARSE_CONFIG_FOUND)
 
 # METIS (Optional dependency).
-suitesparse_find_component(METIS FILES metis.h LIBRARIES metis)
+# suitesparse_find_component(METIS FILES metis.h LIBRARIES metis)
 
 # Only mark SuiteSparse as found if all required components and dependencies
 # have been found.

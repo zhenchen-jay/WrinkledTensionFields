@@ -1,4 +1,5 @@
 #include "StVKMaterial.h"
+#include "../CommonFunctions.h"
 
 double StVKMaterial::stretchingEnergy(
     const MeshConnectivity &mesh,

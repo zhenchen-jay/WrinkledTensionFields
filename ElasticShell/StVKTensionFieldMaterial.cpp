@@ -1,4 +1,5 @@
 #include "StVKTensionFieldMaterial.h"
+#include "../CommonFunctions.h"
 
 double StVKTensionFieldMaterial::stretchingEnergy(
     const MeshConnectivity &mesh,

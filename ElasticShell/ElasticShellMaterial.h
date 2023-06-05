@@ -6,9 +6,8 @@
 #include <vector>
 #include <set>
 
-#include "../GeometryDerivatives.h"
+#include "../MeshLib/GeometryDerivatives.h"
 #include "../SecondFundamentalForm/SecondFundamentalFormDiscretization.h"
-#include "../CommonFunctions.h"
 
 class ElasticShellMaterial
 {
