@@ -70,14 +70,11 @@ The detailed parameters are listed below:
 ## JSON file
 The setup json file has the following format:
 
-**Required Entries:**
 * `rest_mesh`: The .obj file for the rest (coarse) mesh.
 * `base_mesh`: The .obj file for the base (coarse) mesh.
 * `poisson_ratio`: The Poisson's ratio
 * `thickness`: Thickness (m)
 * `youngs_modulus`: Young's modulus (Pa)
-
-**Optional Entries:**
 * `amp_path`: The .txt file to store the current/final amplitude file (per vertex value)
 * `phi_path`: The .txt file to store the current/final phase file (per vertex value)
 * `dphi_path`: The .txt file to store the current/final frequency file (per edge value)
