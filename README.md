@@ -88,7 +88,7 @@ The setup json file has the following format:
 
 ## Compiling Issues
 
-* It may take a while to compile on Windows, see [libsell](https://github.com/evouga/libshell) for possible solutions.
+* It may take a while to compile on Windows, see [libsell](https://github.com/evouga/libshell) for possible solutions. Beside, you may encounter the miss of `libopenblas.dll` issue. In this case, please copy the `libopenblas.dll` inside the `build/_deps/comiso-src/ext/OpenBLAS-v0.2.14-Win64-int64/bin` and paste it into `build/bin/Release`. We also include pre-compiled executable files under the folder `WindowsExe/Release`.
 
 * When compiling in MacOS with C++17, you may encounter this issue: 
 ```
