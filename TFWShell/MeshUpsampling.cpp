@@ -1677,7 +1677,42 @@ void wrinkledMeshUpsampling(const Eigen::MatrixXd &baseV, const Eigen::MatrixXi 
 {
 	MeshConnectivity baseMesh(baseF);
 	Eigen::VectorXd vertArea = getVertArea(baseV, baseMesh);
-	Eigen::VectorXd edgeArea = getEdgeArea(baseV, baseMesh);
+	Eigen::VectorXd faceArea = getFaceArea(baseV, baseMesh);
+	Eigen::VectorXd edgeArea(baseMesh.nEdges());
+
+	for (int i = 0; i < baseMesh.nEdges(); i++)
+	{
+		int f0 = baseMesh.edgeFace(i, 0);
+		int f1 = baseMesh.edgeFace(i, 1);
+
+		bool valid0 = f0 != -1;
+		bool valid1 = f1 != -1;
+
+		if (valid0)	// check all amp is zero
+		{
+			if (amp(baseF(f0, 0)) == 0 && amp(baseF(f0, 1)) == 0 && amp(baseF(f0, 2)) == 0)
+			{
+				valid0 = false;
+			}
+		}
+		if (valid1)	// check all amp is zero
+		{
+			if (amp(baseF(f1, 0)) == 0 && amp(baseF(f1, 1)) == 0 && amp(baseF(f1, 2)) == 0)
+			{
+				valid1 = false;
+			}
+		}
+
+
+		if (valid0 && valid1)
+			edgeArea(i) = (faceArea(f0) + faceArea(f1)) / 2.;
+		else if (valid0 && !valid1)
+			edgeArea(i) = faceArea(f0) / 2.;
+		else if (valid1 && !valid0)
+			edgeArea(i) = faceArea(f1) / 2.;
+		else
+			edgeArea(i) = 0;
+	}
 
 	int nverts = baseV.rows();
 	std::vector<std::complex<double>> zvals;

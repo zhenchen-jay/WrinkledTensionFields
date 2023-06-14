@@ -1589,29 +1589,29 @@ void faceDPhi2EdgeDPhi(const Eigen::MatrixXd& faceDphi,
 	std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << "|| w || = " << w.norm() << std::endl;
 	B = -edgeDphi2FaceDphi.transpose() * M * w;
 
-//	Eigen::SparseMatrix<double> I(Q.rows(), Q.cols());
-//	I.setIdentity();
-//
-//	Eigen::CholmodSupernodalLLT<Eigen::SparseMatrix<double>> lltSolver;
-//	while(lltSolver.compute(Q).info() != Eigen::Success)
-//	{
-//		Q = Q + 1e-8 * I;
-//	}
-////	std::cout << "QP Solver Start: " << Q.norm() << ", " << B.norm() << ", " << Aeq.norm() << ", " << Beq.norm() << ", " << Aieq.norm() << ", " << Bieq.norm() << std::endl;
-//	EigenNASOQSparse qp;
-//	qp.setAccThresh(1e-6);
-//	Q = I;
-//	delta_x.setZero();
-//	double perturb = 1e-9;
-//	bool isQPSuccess = qp.solve(Q, B, Aeq, Beq, Aieq, Bieq, lx, ux, delta_x, perturb);
-//
-//	dphi = delta_x;
-//	double sqerrorResidual = (edgeDphi2FaceDphi * dphi - w).transpose() * M * (edgeDphi2FaceDphi * dphi - w);
-//	double errorResidual = std::sqrt(sqerrorResidual);
-//	double constraintsResidual = (C * dphi).norm();
-//	double initialwNorm = w.transpose() * M * w;
+	Eigen::SparseMatrix<double> I(Q.rows(), Q.cols());
+	I.setIdentity();
 
-	L.clear();
+	Eigen::CholmodSupernodalLLT<Eigen::SparseMatrix<double>> lltSolver;
+	while(lltSolver.compute(Q).info() != Eigen::Success)
+	{
+		Q = Q + 1e-8 * I;
+	}
+//	std::cout << "QP Solver Start: " << Q.norm() << ", " << B.norm() << ", " << Aeq.norm() << ", " << Beq.norm() << ", " << Aieq.norm() << ", " << Bieq.norm() << std::endl;
+	EigenNASOQSparse qp;
+	qp.setAccThresh(1e-6);
+	Q = I;
+	delta_x.setZero();
+	double perturb = 1e-9;
+	bool isQPSuccess = qp.solve(Q, B, Aeq, Beq, Aieq, Bieq, lx, ux, delta_x, perturb);
+
+	dphi = delta_x;
+	double sqerrorResidual = (edgeDphi2FaceDphi * dphi - w).transpose() * M * (edgeDphi2FaceDphi * dphi - w);
+	double errorResidual = std::sqrt(sqerrorResidual);
+	double constraintsResidual = (C * dphi).norm();
+	double initialwNorm = w.transpose() * M * w;
+
+	/*L.clear();
 	for (int k=0; k<Q.outerSize(); ++k)
 		for (Eigen::SparseMatrix<double>::InnerIterator it(Q,k); it; ++it)
 		{
@@ -1641,7 +1641,7 @@ void faceDPhi2EdgeDPhi(const Eigen::MatrixXd& faceDphi,
 	double sqerrorResidual = (edgeDphi2FaceDphi * dphi - w).transpose() * M * (edgeDphi2FaceDphi * dphi - w);
 	double errorResidual = std::sqrt(sqerrorResidual);
 	double constraintsResidual = (C * dphi).norm();
-	double initialwNorm = w.transpose() * M * w;
+	double initialwNorm = w.transpose() * M * w;*/
 
 	std::cout << "|| w ||_ainv = " << initialwNorm << std::endl;
 	std::cout << "|| dphi - w ||_ainv = " << errorResidual << std::endl;
