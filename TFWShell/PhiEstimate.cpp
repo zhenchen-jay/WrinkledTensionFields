@@ -16,6 +16,7 @@
 #include <Eigen/CholmodSupport>
 
 #include "PhiEstimate.h"
+#include "KnoppelStripePatternEdgeOmega.h"
 
 #include "../MeshLib/MeshConnectivity.h"
 #include "../MeshLib/MeshGeometry.h"
@@ -1469,11 +1470,11 @@ void estimateWrinkleVariablesFromStrain(
 	}
 }
 
-void faceDPhi2EdgeDPhi(const Eigen::MatrixXd& faceDphi, 
-	const std::set<int>& tensionFaces, 
-	const std::vector<Eigen::Matrix2d>& abars,
-	Eigen::MatrixXi F, 
-	Eigen::VectorXd& dphi)
+void faceDPhi2EdgeDPhi(const Eigen::MatrixXd& faceDphi,
+                       const std::set<int>& tensionFaces,
+                       const std::vector<Eigen::Matrix2d>& abars,
+                       Eigen::MatrixXi F,
+                       Eigen::VectorXd& dphi)
 {
 	MeshConnectivity mesh(F);
 	int nedges = mesh.nEdges();
@@ -1510,7 +1511,7 @@ void faceDPhi2EdgeDPhi(const Eigen::MatrixXd& faceDphi,
 	C.setFromTriplets(constraintCoeff.begin(), constraintCoeff.end());
 	std::cout << nfaces - row << " faces are removed from integrabilty due to pure tension check." << std::endl;
 
-	std::vector<Eigen::Triplet<double> > Mcoeffs;	
+	std::vector<Eigen::Triplet<double> > Mcoeffs;
 	for (int i = 0; i < nfaces; i++)
 	{
 		Eigen::Matrix2d ainv = abars[i].inverse();
@@ -1588,19 +1589,55 @@ void faceDPhi2EdgeDPhi(const Eigen::MatrixXd& faceDphi,
 	std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << "|| w || = " << w.norm() << std::endl;
 	B = -edgeDphi2FaceDphi.transpose() * M * w;
 
-	Eigen::SparseMatrix<double> I(Q.rows(), Q.cols());
-	I.setIdentity();
+//	Eigen::SparseMatrix<double> I(Q.rows(), Q.cols());
+//	I.setIdentity();
+//
+//	Eigen::CholmodSupernodalLLT<Eigen::SparseMatrix<double>> lltSolver;
+//	while(lltSolver.compute(Q).info() != Eigen::Success)
+//	{
+//		Q = Q + 1e-8 * I;
+//	}
+////	std::cout << "QP Solver Start: " << Q.norm() << ", " << B.norm() << ", " << Aeq.norm() << ", " << Beq.norm() << ", " << Aieq.norm() << ", " << Bieq.norm() << std::endl;
+//	EigenNASOQSparse qp;
+//	qp.setAccThresh(1e-6);
+//	Q = I;
+//	delta_x.setZero();
+//	double perturb = 1e-9;
+//	bool isQPSuccess = qp.solve(Q, B, Aeq, Beq, Aieq, Bieq, lx, ux, delta_x, perturb);
+//
+//	dphi = delta_x;
+//	double sqerrorResidual = (edgeDphi2FaceDphi * dphi - w).transpose() * M * (edgeDphi2FaceDphi * dphi - w);
+//	double errorResidual = std::sqrt(sqerrorResidual);
+//	double constraintsResidual = (C * dphi).norm();
+//	double initialwNorm = w.transpose() * M * w;
 
-	Q = Q + 1e-8 * I;
-	std::cout << "QP Solver Start: " << Q.norm() << ", " << B.norm() << ", " << Aeq.norm() << ", " << Beq.norm() << ", " << Aieq.norm() << ", " << Bieq.norm() << std::endl;
-	EigenNASOQSparse qp;
-	qp.setAccThresh(1e-6);
-	
-	delta_x.setZero();
-	double perturb = 1e-9;
-	bool isQPSuccess = qp.solve(Q, B, Aeq, Beq, Aieq, Bieq, lx, ux, delta_x, perturb);
+	L.clear();
+	for (int k=0; k<Q.outerSize(); ++k)
+		for (Eigen::SparseMatrix<double>::InnerIterator it(Q,k); it; ++it)
+		{
+			L.push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value()));
+		}
 
-	dphi = delta_x;
+	for(int k = 0; k < C.outerSize(); ++k)
+		for (Eigen::SparseMatrix<double>::InnerIterator it(C,k); it; ++it)
+		{
+			L.push_back(Eigen::Triplet<double>(it.row() + Q.rows(), it.col(), it.value()));
+			L.push_back(Eigen::Triplet<double>(it.col(), it.row() + Q.rows(), it.value()));
+		}
+
+
+	Eigen::SPQR<Eigen::SparseMatrix<double>> spqr;
+	Eigen::SparseMatrix<double> extendMat(Q.rows() + C.rows(), Q.rows() + C.rows());
+	extendMat.setFromTriplets(L.begin(), L.end());
+
+	Eigen::VectorXd extendVec(B.size() + C.rows());
+	extendVec.setZero();
+	extendVec.segment(0, B.size()) = -B;
+
+	spqr.compute(extendMat);
+	Eigen::VectorXd sol = spqr.solve(extendVec);
+	dphi = sol.segment(0, B.size());
+
 	double sqerrorResidual = (edgeDphi2FaceDphi * dphi - w).transpose() * M * (edgeDphi2FaceDphi * dphi - w);
 	double errorResidual = std::sqrt(sqerrorResidual);
 	double constraintsResidual = (C * dphi).norm();
@@ -1621,7 +1658,8 @@ void estimateWrinkleVariablesFromStrainCutbyTension(
 	Eigen::VectorXd& amp,
 	Eigen::VectorXd& phi,
 	Eigen::VectorXd& dphi,
-	std::set<int>& tensionFaces)
+	std::set<int>& tensionFaces,
+	RoundingType roundingType)
 {
 	tensionFaces.clear();
 	MeshConnectivity mesh(F);
@@ -1632,13 +1670,30 @@ void estimateWrinkleVariablesFromStrainCutbyTension(
 	estimateAmpOmegaFromStrain(abars, curPos, F, clampedVerts, amplitudeEstimate, amp, w, tensionFaces);
 	faceDPhi2EdgeDPhi(w, tensionFaces, abars, F, dphi);
 
-	Eigen::MatrixXd cutV;
-	Eigen::MatrixXi cutF;
+	if(roundingType == CWFRound)
+	{
+		Eigen::VectorXd vertArea = getVertArea(curPos, mesh);
+		Eigen::VectorXd edgeArea = getEdgeArea(curPos, mesh);
 
-	Eigen::VectorXd cutAmp, cutPhi;
+		int nverts = curPos.rows();
+		std::vector<std::complex<double>> zvals;
+		roundZvalsFromEdgeOmega(mesh, dphi, edgeArea, vertArea, nverts, zvals);
 
-	roundPhiFromDphiCutbyTension(curPos, F, cutV, cutF, abars, amp, dphi, ComisoRound, phi, cutPhi, cutAmp, tensionFaces, false);// by setting to false, round phi codes will use provided pure tension faces to cut the mesh and do rounding.
-	return;
+		phi.resize(nverts);
+		for(int i = 0; i < nverts; i++)
+		{
+			phi[i] = std::arg(zvals[i]);
+		}
+	}
+
+	else
+	{
+		Eigen::MatrixXd cutV;
+		Eigen::MatrixXi cutF;
+
+		Eigen::VectorXd cutAmp, cutPhi;
+		roundPhiFromDphiCutbyTension(curPos, F, cutV, cutF, abars, amp, dphi, ComisoRound, phi, cutPhi, cutAmp, tensionFaces, false);// by setting to false, round phi codes will use provided pure tension faces to cut the mesh and do rounding.
+	}
 }
 
 

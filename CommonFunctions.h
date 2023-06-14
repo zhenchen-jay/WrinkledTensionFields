@@ -64,7 +64,7 @@ enum SubdivisionType
 enum RoundingType
 {
 	ComisoRound = 0,
-	GurobiRound = 1
+	CWFRound = 1
 };
 
 struct TimeCost
@@ -103,5 +103,19 @@ void matToVec(const Eigen::MatrixXd& mat, Eigen::VectorXd& vec);
 void vecToMat(const Eigen::VectorXd& vec, Eigen::MatrixXd& mat);
 
 bool mkdir(const std::string& foldername);
+
+Eigen::MatrixXd intrinsicHalfEdgeVec2VertexVec(const Eigen::MatrixXd& v, const Eigen::MatrixXd& pos, const MeshConnectivity& mesh);
+Eigen::MatrixXd intrinsicHalfEdgeVec2FaceVec(const Eigen::MatrixXd& w, const Eigen::MatrixXd& pos, const MeshConnectivity& mesh);
+Eigen::MatrixXd intrinsicEdgeVec2FaceVec(const Eigen::VectorXd& w, const Eigen::MatrixXd& pos, const MeshConnectivity& mesh);
+
+Eigen::VectorXd faceVec2IntrinsicEdgeVec(const Eigen::MatrixXd& v, const Eigen::MatrixXd& pos, const MeshConnectivity& mesh);
+Eigen::MatrixXd intrinsicEdgeVec2FaceVec(const Eigen::VectorXd& v, const Eigen::MatrixXd& pos, const MeshConnectivity& mesh);
+Eigen::MatrixXd intrinsicHalfEdgeVec2FaceVec(const Eigen::MatrixXd& v, const Eigen::MatrixXd& pos, const MeshConnectivity& mesh);
+
+void computeBaryGradient(const Eigen::Vector3d& P0, const Eigen::Vector3d& P1, const Eigen::Vector3d& P2, const Eigen::Vector3d& bary, Eigen::Matrix3d& baryGrad);
+
+Eigen::VectorXd getFaceArea(const Eigen::MatrixXd& V, const MeshConnectivity& mesh);
+Eigen::VectorXd getEdgeArea(const Eigen::MatrixXd& V, const MeshConnectivity& mesh);
+Eigen::VectorXd getVertArea(const Eigen::MatrixXd& V, const MeshConnectivity& mesh);
 
 #endif

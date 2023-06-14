@@ -63,8 +63,8 @@ namespace TFW
 				igl::principal_curvature(basePos, baseMesh.faces(), PD1, PD2, PV1, PV2);
 		}
 
-		void getWrinkleMesh(const TFWSetup& setup, int upsamplingTimes = 2, bool isUseV1Term = false, bool isUseV2Term = true);
-		void reinitializeWrinkleVaribles(const TFWSetup& setup);
+		void getWrinkleMesh(const TFWSetup& setup, int upsamplingTimes = 2, bool isUseV1Term = false, bool isUseV2Term = true, RoundingType roundingType = CWFRound, bool isFixBnd = false);
+		void reinitializeWrinkleVaribles(const TFWSetup& setup, RoundingType roundingType = CWFRound);
 
 	};
 }

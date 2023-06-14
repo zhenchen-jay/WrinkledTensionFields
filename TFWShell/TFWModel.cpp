@@ -454,31 +454,6 @@ void TFWModel::save(int curIterations, TimeCost curTimeCost, double stepSize, do
 	}
 }
 
-void TFWModel::getUpsampledWrinkledMesh(Eigen::MatrixXd& NV, Eigen::MatrixXi& NF, Eigen::MatrixXd &upsampledTFTV, Eigen::MatrixXi &upsampledTFTF, Eigen::MatrixXd &soupPhiV, Eigen::MatrixXi &soupPhiF, Eigen::MatrixXd &soupProblemV, Eigen::MatrixXi &soupProblemF, Eigen::VectorXd &upsampledAmp, Eigen::VectorXd &soupPhi)
-{
-	auto curState = _state;
-	Eigen::MatrixXd curV = curState.basePos;
-	Eigen::MatrixXi curF = curState.baseMesh.faces();
-	Eigen::VectorXd curAmp = curState.amplitude;
-	Eigen::VectorXd curPhi = curState.phi;
-
-	std::set<int> clampedVerts;
-
-	for (auto& it : _setup.clampedDOFs)
-	{
-		int vid = it.first / 3;
-		if (clampedVerts.count(vid) == 0)
-			clampedVerts.insert(vid);
-	}
-	std::set<int> problemFaces;
-	auto sff = std::make_shared<MidedgeAverageFormulation>();
-
-	roundPhiFromDphiCutbyTension(curState.basePos, curState.baseMesh.faces(), curV, curF, _setup.abars, curState.amplitude, curState.dphi, GurobiRound, curState.phi, curPhi, curAmp, problemFaces);
-	wrinkledMeshUpsamplingUncut(curState.basePos, curState.baseMesh.faces(), _setup.restV, _setup.restF, curV, curF, problemFaces, clampedVerts,
-		&NV, &NF, &upsampledTFTV, &upsampledTFTF, &soupPhiV, &soupPhiF, &soupProblemV, &soupProblemF, &upsampledAmp, &soupPhi,
-		curAmp, curPhi, *sff, _setup.YoungsModulus, _setup.PoissonsRatio, 2, SubdivisionType::Loop, false, true);
-}
-
 Eigen::VectorXd TFWModel::getProjectedGradient(const Eigen::VectorXd &x)
 {
 	Eigen::VectorXd g;

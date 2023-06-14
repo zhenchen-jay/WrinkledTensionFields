@@ -7,11 +7,16 @@
 #include <igl/cotmatrix.h>
 #include <igl/principal_curvature.h>
 
-#include "MeshUpsampling.h"
-#include "../MeshLib/GeometryDerivatives.h"
 #include "PhiEstimate.h"
-#include "../findCorners.h"
+#include "KnoppelStripePatternEdgeOmega.h"
+#include "MeshUpsampling.h"
+#include "../SecMeshParse.h"
+
+#include "../ComplexLoop/ComplexLoop.h"
+#include "../ComplexLoop/ComplexLoopZuenko.h"
+#include "../MeshLib/GeometryDerivatives.h"
 #include "../MeshLib/MeshGeometry.h"
+#include "../findCorners.h"
 
 #include <iostream>
 #include <algorithm>
@@ -1586,4 +1591,161 @@ void wrinkledMeshUpsamplingUncut(const Eigen::MatrixXd &uncutV, const Eigen::Mat
 		*wrinkledF = NF;
 	if (upsampledAmp)
 		*upsampledAmp = finalAmp;
+}
+
+static void buildVertexNeighboringInfo(const MeshConnectivity& mesh, int nverts, std::vector<std::vector<int>>& vertNeiEdges, std::vector<std::vector<int>>& vertNeiFaces)
+{
+	vertNeiEdges.resize(nverts);
+	vertNeiFaces.resize(nverts);
+
+	int nfaces = mesh.nFaces();
+	int nedges = mesh.nEdges();
+
+	for(int i = 0; i < nfaces; i++)
+	{
+		for(int j = 0; j < 3; j++)
+		{
+			vertNeiFaces[mesh.faceVertex(i, j)].push_back(i);
+		}
+	}
+
+	for(int i = 0; i < nedges; i++)
+	{
+		for(int j = 0; j < 2; j++)
+		{
+			vertNeiEdges[mesh.edgeVertex(i, j)].push_back(i);
+		}
+	}
+}
+
+void getWrinkledMesh(const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const std::vector<std::complex<double>>& zvals, const std::vector<std::vector<int>>& vertNeiFaces, Eigen::MatrixXd& wrinkledV, bool isUseV1Term, bool isUseV2Term)
+{
+	int nverts = V.rows();
+	int nfaces = F.rows();
+
+	wrinkledV = V;
+	Eigen::MatrixXd VN;
+	igl::per_vertex_normals(V, F, VN);
+
+	for (int vid = 0; vid < nverts; vid++)
+	{
+		wrinkledV.row(vid) += zvals[vid].real() * VN.row(vid);
+	}
+
+	for (int i = 0; i < nfaces; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			int vid = F(i, j);
+			Eigen::Matrix2d Ib;
+			Eigen::Matrix<double, 3, 2> drb;
+			drb.col(0) = (V.row(F(i, (j + 1) % 3)) - V.row(F(i, j))).transpose();
+			drb.col(1) = (V.row(F(i, (j + 2) % 3)) - V.row(F(i, j))).transpose();
+
+			Ib = drb.transpose() * drb;
+
+			std::complex<double> dz0 = zvals[F(i, (j + 1) % 3)] - zvals[F(i, j)];
+			std::complex<double> dz1 = zvals[F(i, (j + 2) % 3)] - zvals[F(i, j)];
+
+			Eigen::Vector2d aSqdtheta;
+			aSqdtheta << (std::conj(zvals[vid]) * dz0).imag(), (std::conj(zvals[vid]) * dz1).imag();
+
+			Eigen::Vector3d extASqdtheta = drb * Ib.inverse() * aSqdtheta;
+
+			double theta = std::arg(zvals[vid]);
+
+			if (isUseV2Term)    // now we only support v2 correction
+			{
+				wrinkledV.row(vid) += 1 / vertNeiFaces[vid].size() * (1. / 8 * std::sin(2 * theta) * extASqdtheta);
+			}
+
+
+		}
+	}
+}
+
+void wrinkledMeshUpsampling(const Eigen::MatrixXd &baseV, const Eigen::MatrixXi &baseF,
+                            const Eigen::MatrixXd &restV, const Eigen::MatrixXi &restF,
+                            const Eigen::VectorXd &amp, const Eigen::VectorXd& omega, Eigen::VectorXd &phi,
+                            Eigen::MatrixXd *wrinkledV, Eigen::MatrixXi *wrinkledF,
+                            Eigen::MatrixXd *upsampledTFTV, Eigen::MatrixXi *upsampledTFTF,
+                            Eigen::VectorXd *upsampledAmp, Eigen::VectorXd *upsampledPhi,
+                            const SecondFundamentalFormDiscretization &sff,
+                            double YoungsModulus, double PoissonRatio,
+                            int numSubdivs, bool isFixBnd,
+                            bool isUseV1Term, bool isUseV2Term)
+{
+	MeshConnectivity baseMesh(baseF);
+	Eigen::VectorXd vertArea = getVertArea(baseV, baseMesh);
+	Eigen::VectorXd edgeArea = getEdgeArea(baseV, baseMesh);
+
+	int nverts = baseV.rows();
+	std::vector<std::complex<double>> zvals;
+	roundZvalsFromEdgeOmega(baseMesh, omega, edgeArea, vertArea, nverts, zvals);
+
+	phi.resize(nverts);
+	for(int i = 0; i < nverts; i++)
+	{
+		phi[i] = std::arg(zvals[i]);
+		zvals[i] = amp[i] * std::complex<double>(std::cos(phi[i]), std::sin(phi[i]));
+	}
+
+	Eigen::VectorXd edgeVec = swapEdgeVec(baseF, omega, 0);
+	Mesh secMesh = convert2SecMesh(baseV, baseF);
+
+	std::shared_ptr<ComplexLoop> complexLoopOpt = std::make_shared<ComplexLoopZuenko>();
+	complexLoopOpt->setBndFixFlag(isFixBnd);
+	complexLoopOpt->SetMesh(secMesh);
+
+	Eigen::VectorXd subEdgeVec;
+	std::vector<std::complex<double>> upZvals;
+
+	complexLoopOpt->Subdivide(edgeVec, zvals, subEdgeVec, upZvals, numSubdivs);
+	Mesh tmpMesh = complexLoopOpt->GetMesh();
+
+	Eigen::MatrixXd upBaseV, finalWrinkleV;
+	Eigen::MatrixXi upBaseF;
+
+	parseSecMesh(tmpMesh, upBaseV, upBaseF);
+
+	std::vector<std::vector<int>> vertNeiEdges, vertNeiFaces;
+	buildVertexNeighboringInfo(MeshConnectivity(upBaseF), upBaseV.rows(), vertNeiEdges, vertNeiFaces);
+
+	getWrinkledMesh(upBaseV, upBaseF, upZvals, vertNeiFaces, finalWrinkleV, false, isUseV2Term);
+
+	if(wrinkledV)
+	{
+		*wrinkledV = finalWrinkleV;
+	}
+	if(wrinkledF)
+	{
+		*wrinkledF = upBaseF;
+	}
+	if(upsampledTFTV)
+	{
+		*upsampledTFTV = upBaseV;
+	}
+	if(upsampledTFTF)
+	{
+		*upsampledTFTF = upBaseF;
+	}
+
+	if(upsampledAmp)
+	{
+		upsampledAmp->resize(upZvals.size());
+		for(int i = 0; i < upZvals.size(); i++)
+		{
+			(*upsampledAmp)[i] = std::abs(upZvals[i]);
+		}
+	}
+
+	if(upsampledPhi)
+	{
+		upsampledPhi->resize(upZvals.size());
+		for(int i = 0; i < upZvals.size(); i++)
+		{
+			(*upsampledPhi)[i] = std::arg(upZvals[i]);
+		}
+	}
+
 }

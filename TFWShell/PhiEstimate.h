@@ -51,7 +51,8 @@ void estimateWrinkleVariablesFromStrainCutbyTension(
     Eigen::VectorXd& amp,
     Eigen::VectorXd& phi,
     Eigen::VectorXd& dphi,
-    std::set<int>& tensionFaces);
+    std::set<int>& tensionFaces,
+	RoundingType roundingType = ComisoRound);
 
 void estimateWrinkleVariablesFromStrain(
     const std::vector<Eigen::Matrix2d>& abars,

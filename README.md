@@ -17,6 +17,7 @@ As mentioned in the paper, we seperate the solver into two parts: base mesh extr
 - [NASOQ](https://nasoq.github.io/) 
 - [Json](https://github.com/nlohmann/json.git) (We include the json.hpp file in the external/json)
 - [Suite Sparse](https://people.engr.tamu.edu/davis/suitesparse.html)
+- [Spectra](https://github.com/yixuan/spectra)
 
 All the dependencies are solved by Fetcontent, except Suite Sparse (See below for instruction) and NASOQ (included as a submodule). 
 
@@ -48,7 +49,10 @@ To build this project, you can use the following commands
     cmake ..
     make -j4
 ```
-**important:** Make sure you have `--recursive` when you clone the repository.
+**important:** Make sure you have `--recursive` when you clone the repository. You may also need to manually set the lapack option for NASOQ as:
+```
+    cmake .. -DNASOQ_USE_CLAPACK=ON
+```
 
 ## To run
 You can use the following commands to run the program:
@@ -58,10 +62,12 @@ You can use the following commands to run the program:
 The detailed parameters are listed below:
 
 * `-i/--input`: path for input json file (`.json`), which contains the problem setup (see below for details).
-* `-o/--output`: the folder for output results (ampliude, frequency and wrinkled mesh).
+* `-o/--output`: the folder for output results (amplitude, frequency and wrinkled mesh).
 * `-r/--reinitialization`: reinitialize the amplitude and frequency based on the current strain.
 * `-u/--upsampleTimes`:  the upsampling (subdivision) times to recover the final wrinkled mesh.
 * `-n/--numIter`: Number of iterations, default is 1000.
+* `-t/--type`: "The upsampling type: Comiso (using Comiso to cut mesh and round phi from dphi), CWF: the upsampling scheme proposed in the paper - Complex Wrinkle Field Evolution, default is CWF, since it is more robust
+* `-b/--fixBnd`: The flag to turn on the fix boundary option, default is false. This is only need when type = CWF
 * `-g/--gradTol`: The tolerance for gradient norm termination, default is 1e-6.
 * `-x/--xTol`: The tolerance of variable update termination, default is 0.
 * `-f/--fTol`: The tolerance of function update termination, default is 0.
@@ -70,11 +76,14 @@ The detailed parameters are listed below:
 ## JSON file
 The setup json file has the following format:
 
+**Required Entries:**
 * `rest_mesh`: The .obj file for the rest (coarse) mesh.
 * `base_mesh`: The .obj file for the base (coarse) mesh.
 * `poisson_ratio`: The Poisson's ratio
 * `thickness`: Thickness (m)
 * `youngs_modulus`: Young's modulus (Pa)
+
+**Optional Entries:**
 * `amp_path`: The .txt file to store the current/final amplitude file (per vertex value)
 * `phi_path`: The .txt file to store the current/final phase file (per vertex value)
 * `dphi_path`: The .txt file to store the current/final frequency file (per edge value)

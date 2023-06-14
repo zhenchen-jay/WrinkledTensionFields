@@ -137,6 +137,9 @@ include(CLI11)
 set(JSON_INC external/json)
 include_directories(${JSON_INC})
 
+# spectra
+include(spectra)
+
 # Binary executables
 add_subdirectory(apps)
 

@@ -2,6 +2,7 @@
 #include <igl/readOBJ.h>
 #include <igl/writeOBJ.h>
 #include <json.hpp>
+#include <regex>
 
 #include "TFWIO.h"
 #include "PhiEstimate.h"
@@ -312,6 +313,14 @@ bool TFW::saveTFW(const std::string& path, const TFWSetup& setup, TFWState& stat
 		{
 			afs << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << state.amplitude(i) << std::endl;
 		}
+	}
+
+	// wrinkled mesh
+	if(state.wrinkledPos.rows())
+	{
+		std::string wrinklePath = regex_replace(setup.restMeshPath, std::regex(".obj"), "_wrinkledMesh.obj");
+		wrinklePath = filePathPrefix + wrinklePath;
+		igl::writeOBJ(wrinklePath, state.wrinkledPos, state.wrinkledF);
 	}
 
 	return true;

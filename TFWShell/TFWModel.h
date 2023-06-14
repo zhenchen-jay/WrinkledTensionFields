@@ -55,9 +55,6 @@ public:
 
 	Eigen::VectorXd getProjectedGradient(const Eigen::VectorXd &x);
 
-private:
-	void getUpsampledWrinkledMesh(Eigen::MatrixXd& NV, Eigen::MatrixXi& NF, Eigen::MatrixXd &upsampledTFTV, Eigen::MatrixXi &upsampledTFTF, Eigen::MatrixXd &soupPhiV, Eigen::MatrixXi &soupPhiF, Eigen::MatrixXd &soupProblemV, Eigen::MatrixXi &soupProblemF, Eigen::VectorXd &upsampledAmp, Eigen::VectorXd &soupPhi);
-
 public:
 	TFWSetup _setup;
 	TFWState _state;

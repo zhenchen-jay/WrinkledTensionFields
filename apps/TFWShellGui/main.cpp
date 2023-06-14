@@ -34,6 +34,8 @@ int upsamplingTimes = 2;
 double scale;   // plot scale
 bool isUseV1Term;
 bool isUseV2Term;
+bool isFixBnd;
+RoundingType roundingType;
 
 
 std::string filePathPrefix;
@@ -75,6 +77,9 @@ void setParameters()
 
 	isUseV1Term = false;
 	isUseV2Term = true;
+
+	roundingType = CWFRound;
+	isFixBnd = false;
 }
 
 bool loadProblem(std::string loadPath = "")
@@ -107,6 +112,12 @@ bool saveProblem(std::string savePath = "")
     {
         savePath = igl::file_dialog_save();
     }
+	if(!isVisualizeWrinkles)
+	{
+		std::cout << "construct wrinkle mesh" << std::endl;
+		curState.getWrinkleMesh(setup, upsamplingTimes, isUseV1Term, isUseV2Term, roundingType, isFixBnd);
+	}
+
     bool ok = saveTFW(savePath, setup, curState);
     return ok;
 }
@@ -118,7 +129,7 @@ void updateView()
 
 	if(isVisualizeWrinkles)
 	{
-		curState.getWrinkleMesh(setup, upsamplingTimes, isUseV1Term, isUseV2Term);
+		curState.getWrinkleMesh(setup, upsamplingTimes, isUseV1Term, isUseV2Term, roundingType, isFixBnd);
 		polyscope::registerSurfaceMesh("wrinkled mesh", curState.wrinkledPos, curState.wrinkledF);
 		polyscope::getSurfaceMesh("wrinkled mesh")->setSurfaceColor({ 122 / 255.0, 80 / 255.0, 91 / 255.0 });
 	}
@@ -172,6 +183,7 @@ void callback() {
     if (ImGui::Button("Load", ImVec2((w - p) / 2.f, 0)))
     {
         loadProblem();
+		updateView();
     }
     ImGui::SameLine(0, p);
     if (ImGui::Button("Save", ImVec2((w - p) / 2.f, 0)))
@@ -207,6 +219,15 @@ void callback() {
 		{
 			updateView();
 		}
+		if (ImGui::Checkbox("Fix bnd", &isFixBnd))
+		{
+			updateView();
+		}
+		if (ImGui::Combo("Round Type", (int*)&roundingType, "Comiso\0CWFRound\0\0"))
+		{
+			updateView();
+		}
+
 	}
 
     if (ImGui::CollapsingHeader("wrinkled mesh shift", ImGuiTreeNodeFlags_DefaultOpen))
@@ -220,7 +241,11 @@ void callback() {
                 {
                     for(int i = 0; i < setup.obs.size(); i++)
                     {
-                        polyscope::getSurfaceMesh("current obstacle " + std::to_string(i))->translate({ (surfShiftx - preShiftx) * boundx, 0, 0});
+	                    if(polyscope::hasSurfaceMesh("current obstacle " + std::to_string(i)))
+	                    {
+		                    polyscope::getSurfaceMesh("current obstacle " + std::to_string(i))->translate({ (surfShiftx - preShiftx) * boundx, 0, 0});
+						}
+
                     }
                 }
                 preShiftx = surfShiftx;
@@ -236,7 +261,11 @@ void callback() {
                 {
                     for(int i = 0; i < setup.obs.size(); i++)
                     {
-                        polyscope::getSurfaceMesh("current obstacle " + std::to_string(i))->translate({ 0, (surfShifty - preShifty) * boundy, 0 });
+	                    if(polyscope::hasSurfaceMesh("current obstacle " + std::to_string(i)))
+	                    {
+		                    polyscope::getSurfaceMesh("current obstacle " + std::to_string(i))->translate({ 0, (surfShifty - preShifty) * boundy, 0 });
+						}
+
                     }
                 }
                 preShifty = surfShifty;
@@ -252,7 +281,11 @@ void callback() {
                 {
                     for(int i = 0; i < setup.obs.size(); i++)
                     {
-                        polyscope::getSurfaceMesh("current obstacle " + std::to_string(i))->translate({ 0, 0, (surfShiftz - preShiftz) * boundz });
+						if(polyscope::hasSurfaceMesh("current obstacle " + std::to_string(i)))
+						{
+							polyscope::getSurfaceMesh("current obstacle " + std::to_string(i))->translate({ 0, 0, (surfShiftz - preShiftz) * boundz });
+						}
+
                     }
                 }
                 preShiftz = surfShiftz;

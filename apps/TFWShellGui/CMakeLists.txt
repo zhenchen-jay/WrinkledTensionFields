@@ -26,6 +26,10 @@ file(GLOB SRCFILES
 ../../MIPWrapper/*.cpp
 ../../Collision/*.h
 ../../Collision/*.cpp
+        ../../ComplexLoop/*.h
+        ../../ComplexLoop/*.cpp
+        ../../external/SecStencils/*.h
+        ../../external/SecStencils/*.cpp
 )
     
 add_executable(
@@ -37,6 +41,7 @@ set_target_properties(${PROJECT_NAME}_bin PROPERTIES CXX_STANDARD 17)
 set_target_properties(${PROJECT_NAME}_bin PROPERTIES CXX_STANDARD_REQUIRED ON)
 
 # Link settings
+target_include_directories(${PROJECT_NAME}_bin PUBLIC ${spectra_SOURCE_DIR}/include/Spectra)
 target_link_libraries( ${PROJECT_NAME}_bin
         polyscope
         nasoq
