@@ -104,11 +104,12 @@ include(tbb)
 
 # NASOQ, refer https://github.com/cheshmi/nasoq-example.git
 # set NASOQ properties such BLAS Type, etc
-set(NASOQ_BLAS_BACKEND "OpenBLAS" CACHE STRING "BLAS implementation for NASOQ to use")
 
-if (MSVC)
- set(NASOQ_USE_CLAPACK  ON CACHE STRING "Use CLAPACK as the LAPACK implementaiton")
+if(MSVC)
+ set(NASOQ_BLAS_BACKEND "MKL" CACHE STRING "BLAS implementation for NASOQ to use")
  add_definitions(-DEIGEN_STRONG_INLINE=inline)
+else()
+ set(NASOQ_BLAS_BACKEND "OpenBLAS" CACHE STRING "BLAS implementation for NASOQ to use")
 endif()
 
 add_subdirectory(external/nasoq)
@@ -140,7 +141,7 @@ include_directories(${JSON_INC})
 
 # spectra
 find_package(SPECTRA)
-
+include_directories(${SPECTRA_INCLUDE_DIR})
 # Binary executables
 add_subdirectory(apps)
 
