@@ -108,6 +108,7 @@ set(NASOQ_BLAS_BACKEND "OpenBLAS" CACHE STRING "BLAS implementation for NASOQ to
 
 if (MSVC)
  set(NASOQ_USE_CLAPACK  ON CACHE STRING "Use CLAPACK as the LAPACK implementaiton")
+ add_definitions(-DEIGEN_STRONG_INLINE=inline)
 endif()
 
 add_subdirectory(external/nasoq)
@@ -138,7 +139,7 @@ set(JSON_INC external/json)
 include_directories(${JSON_INC})
 
 # spectra
-include(spectra)
+find_package(SPECTRA)
 
 # Binary executables
 add_subdirectory(apps)
